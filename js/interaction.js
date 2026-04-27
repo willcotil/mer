@@ -278,7 +278,8 @@ function _onMouseUp(e) {
 
 // Safety: ensure we always return to IDLE on global mouseup
 function _onGlobalMouseUp(e) {
-  if (mode !== S.IDLE && mode !== S.CONNECTING && e.button === 0) {
+  if (e.button === 0 && mode !== S.IDLE) {
+    if (mode === S.CONNECTING) { _cancelConnect(); return; }
     mode = S.IDLE;
     if (_rbRect) { _rbRect.remove(); _rbRect = null; }
     _dragStartPositions.clear();

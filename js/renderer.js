@@ -3,15 +3,16 @@ import { computeAutoSize, canvasToSVG, svgEl } from './utils.js';
 import { createNodeGroup, updateNodeGroup }     from './shapes.js';
 import { createEdgeGroup, updateEdgeGroup }     from './edges.js';
 
-let _svg, _viewport, _nodesLayer, _edgesLayer, _overlay;
+let _svg, _viewport, _nodesLayer, _edgesLayer, _cardLabelsLayer, _overlay;
 const nodeGroups = new Map();   // id → <g>
 const edgeGroups = new Map();   // id → <g>
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
-export function initRenderer(svg, viewport, nodesLayer, edgesLayer, overlay) {
+export function initRenderer(svg, viewport, nodesLayer, edgesLayer, cardLabelsLayer, overlay) {
   _svg = svg; _viewport = viewport;
-  _nodesLayer = nodesLayer; _edgesLayer = edgesLayer; _overlay = overlay;
+  _nodesLayer = nodesLayer; _edgesLayer = edgesLayer;
+  _cardLabelsLayer = cardLabelsLayer; _overlay = overlay;
 
   state.on('change',          _onChange);
   state.on('selection-change', _onSelectionChange);
@@ -52,9 +53,15 @@ function _onChange({ type, node, edge, id }) {
     case 'node:delete': {
       const g = nodeGroups.get(id);
       if (g) { g.remove(); nodeGroups.delete(id); }
-      // Clean orphaned edge groups
+      // Clean orphaned edge groups and their cardinality labels
       for (const [eid, eg] of edgeGroups) {
-        if (!state.edges.has(eid)) { eg.remove(); edgeGroups.delete(eid); }
+        if (!state.edges.has(eid)) {
+          if (_cardLabelsLayer) {
+            _cardLabelsLayer.querySelectorAll(`[data-edge-id="${eid}"]`).forEach(el => el.remove());
+          }
+          eg.remove();
+          edgeGroups.delete(eid);
+        }
       }
       break;
     }
@@ -62,7 +69,7 @@ function _onChange({ type, node, edge, id }) {
     case 'edge:add': {
       const src = state.nodes.get(edge.sourceId);
       const tgt = state.nodes.get(edge.targetId);
-      const ge = createEdgeGroup(edge, src, tgt);
+      const ge = createEdgeGroup(edge, src, tgt, _cardLabelsLayer);
       _edgesLayer.appendChild(ge);
       edgeGroups.set(edge.id, ge);
       break;
@@ -74,7 +81,14 @@ function _onChange({ type, node, edge, id }) {
 
     case 'edge:delete': {
       const ge = edgeGroups.get(id);
-      if (ge) { ge.remove(); edgeGroups.delete(id); }
+      if (ge) {
+        // Remove cardinality labels for this edge from the labels layer
+        if (_cardLabelsLayer) {
+          _cardLabelsLayer.querySelectorAll(`[data-edge-id="${id}"]`).forEach(el => el.remove());
+        }
+        ge.remove();
+        edgeGroups.delete(id);
+      }
       break;
     }
   }
@@ -98,11 +112,16 @@ function _onCanvasChange() {
 function _fullRender() {
   _nodesLayer.replaceChildren();
   _edgesLayer.replaceChildren();
+  if (_cardLabelsLayer) _cardLabelsLayer.replaceChildren();
   nodeGroups.clear();
   edgeGroups.clear();
 
   // Aggregations first (rendered behind)
-  const sorted = Array.from(state.nodes.values()).sort((a) => a.kind === 'aggregation' ? -1 : 1);
+  const sorted = Array.from(state.nodes.values()).sort((a, b) => {
+    if (a.kind === 'aggregation' && b.kind !== 'aggregation') return -1;
+    if (b.kind === 'aggregation' && a.kind !== 'aggregation') return  1;
+    return 0;
+  });
   for (const node of sorted) {
     _applyAutoSize(node);
     const g = createNodeGroup(node);
@@ -112,7 +131,7 @@ function _fullRender() {
   for (const edge of state.edges.values()) {
     const src = state.nodes.get(edge.sourceId);
     const tgt = state.nodes.get(edge.targetId);
-    const g = createEdgeGroup(edge, src, tgt);
+    const g = createEdgeGroup(edge, src, tgt, _cardLabelsLayer);
     _edgesLayer.appendChild(g);
     edgeGroups.set(edge.id, g);
   }
@@ -133,7 +152,7 @@ function _rerenderEdge(eid) {
   if (!e || !eg) return;
   const src = state.nodes.get(e.sourceId);
   const tgt = state.nodes.get(e.targetId);
-  if (src && tgt) updateEdgeGroup(eg, e, src, tgt);
+  if (src && tgt) updateEdgeGroup(eg, e, src, tgt, _cardLabelsLayer);
 }
 
 // ─── Handles overlay ──────────────────────────────────────────────────────────

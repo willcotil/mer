@@ -1,19 +1,25 @@
 import { svgEl } from './utils.js';
+import { closestAnchors } from './shapes.js';
 
 const EDGE_COLOR = '#475569';
 const EDGE_SW    = 1.8;
 
 // ─── Public ───────────────────────────────────────────────────────────────────
 
-export function createEdgeGroup(edge, srcNode, tgtNode) {
+export function createEdgeGroup(edge, srcNode, tgtNode, cardLabelsLayer) {
   const g = svgEl('g', { 'data-id': edge.id, 'data-kind': 'edge', class: 'mer-edge' });
-  _render(g, edge, srcNode, tgtNode);
+  _render(g, edge, srcNode, tgtNode, cardLabelsLayer);
   return g;
 }
 
-export function updateEdgeGroup(g, edge, srcNode, tgtNode) {
+export function updateEdgeGroup(g, edge, srcNode, tgtNode, cardLabelsLayer) {
+  // Remove old cardinality labels for this edge from the external layer
+  const edgeId = g.getAttribute('data-id');
+  if (cardLabelsLayer && edgeId) {
+    cardLabelsLayer.querySelectorAll(`[data-edge-id="${edgeId}"]`).forEach(el => el.remove());
+  }
   g.replaceChildren();
-  _render(g, edge, srcNode, tgtNode);
+  _render(g, edge, srcNode, tgtNode, cardLabelsLayer);
 }
 
 // Progress edge while connecting (canvas coords, inside viewport)
@@ -34,13 +40,14 @@ export function updateProgressEdge(g, from, to) {
 
 // ─── Rendering ────────────────────────────────────────────────────────────────
 
-function _render(g, edge, src, tgt) {
+function _render(g, edge, src, tgt, cardLabelsLayer) {
   if (!src || !tgt) return;
 
-  const from = { x: src.x + src.width  / 2, y: src.y + src.height / 2 };
-  const to   = { x: tgt.x + tgt.width  / 2, y: tgt.y + tgt.height / 2 };
+  // Lines connect through centers of nodes
+  const from = { x: src.x + src.width / 2,  y: src.y + src.height / 2 };
+  const to   = { x: tgt.x + tgt.width / 2,  y: tgt.y + tgt.height / 2 };
   const pts  = [from, ...(edge.waypoints || []), to];
-  const d   = _dPoly(pts);
+  const d    = _dPoly(pts);
 
   // Invisible wide hit area
   g.appendChild(svgEl('path', {
@@ -58,12 +65,15 @@ function _render(g, edge, src, tgt) {
   }));
 
   // Double lines for total participation (parallel segment near entity end)
-  if (srcTotal) _parallelSeg(g, pts[0], pts[1] ?? pts[0]);
-  if (tgtTotal) _parallelSeg(g, pts[pts.length - 1], pts[pts.length - 2] ?? pts[pts.length - 1]);
+  if (srcTotal) _parallelSeg(g, pts[0], pts[1] ?? pts[pts.length - 1]);
+  if (tgtTotal) _parallelSeg(g, pts[pts.length - 1], pts[pts.length - 2] ?? pts[0]);
 
-  // Cardinality labels
-  if (edge.sourceCardinality) _cardLabel(g, pts[0],              pts[1] ?? pts[0],              edge.sourceCardinality);
-  if (edge.targetCardinality) _cardLabel(g, pts[pts.length - 1], pts[pts.length - 2] ?? pts[0], edge.targetCardinality);
+  // Cardinality labels — use border points for placement so labels sit outside the shapes
+  const anchors = closestAnchors(src, tgt);
+  const edgeId = g.getAttribute('data-id');
+  const labelContainer = cardLabelsLayer ?? g;
+  if (edge.sourceCardinality) _cardLabel(labelContainer, anchors.from, anchors.to, edge.sourceCardinality, cardLabelsLayer ? edgeId : null);
+  if (edge.targetCardinality) _cardLabel(labelContainer, anchors.to,   anchors.from, edge.targetCardinality, cardLabelsLayer ? edgeId : null);
 }
 
 // Draw a second line parallel to the edge segment, near `pt` pointing toward `toward`
@@ -89,23 +99,25 @@ function _parallelSeg(g, pt, toward) {
   }
 }
 
-function _cardLabel(g, near, farPt, card) {
+function _cardLabel(container, borderPt, awayPt, card, edgeId) {
   if (!card) return;
-  const dx = farPt.x - near.x, dy = farPt.y - near.y;
+  const dx = awayPt.x - borderPt.x, dy = awayPt.y - borderPt.y;
   const len = Math.hypot(dx, dy);
   if (len < 1) return;
-  const t  = Math.min(0.22, 30 / len);
-  const lx = near.x + dx * t,  ly = near.y + dy * t;
-  const px = -dy / len,         py = dx / len;   // perpendicular
+  const nx = dx / len, ny = dy / len;   // unit vector pointing away from node
+  const px = -ny, py = nx;              // unit vector perpendicular to edge
+  // Place label 14px outside the border point, 10px to the side of the line
   const el = svgEl('text', {
-    x: lx + px * 16, y: ly + py * 16,
+    x: borderPt.x + nx * 14 + px * 10,
+    y: borderPt.y + ny * 14 + py * 10,
     'text-anchor': 'middle', 'dominant-baseline': 'central',
     'font-size': 12, 'font-weight': '700',
     'font-family': '"Inter","Segoe UI",ui-sans-serif,system-ui,sans-serif',
     fill: '#0f172a', 'pointer-events': 'none',
   });
+  if (edgeId) el.setAttribute('data-edge-id', edgeId);
   el.textContent = card;
-  g.appendChild(el);
+  container.appendChild(el);
 }
 
 // ─── Path helpers ─────────────────────────────────────────────────────────────

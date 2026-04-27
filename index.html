@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MER Editor</title>
+  <script>
+    // Tailwind CDN config — must run before the CDN script
+    window.tailwind = { config: { darkMode: 'class' } };
+  </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="css/app.css">
   <style>
@@ -15,12 +19,12 @@
 <body class="flex flex-col h-screen overflow-hidden bg-slate-900 select-none">
 
 <!-- ══════════════════════════════════════════════════════════════ TOOLBAR ══ -->
-<header id="toolbar"
+<header id="toolbar" role="toolbar" aria-label="Barra de ferramentas principal"
   class="flex items-center gap-1 h-11 px-3 bg-slate-900 border-b border-slate-700/60 flex-shrink-0 z-10">
 
   <!-- Brand -->
   <div class="flex items-center gap-2 mr-3">
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" class="opacity-80">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" class="opacity-80" aria-hidden="true" focusable="false">
       <rect x="1" y="5" width="8" height="5" rx="1" fill="#60a5fa" stroke="#93c5fd" stroke-width="1"/>
       <rect x="11" y="5" width="8" height="5" rx="1" fill="#60a5fa" stroke="#93c5fd" stroke-width="1"/>
       <rect x="5"  y="13" width="10" height="5" rx="1" fill="#a78bfa" stroke="#c4b5fd" stroke-width="1"/>
@@ -28,21 +32,21 @@
       <line x1="10" y1="7.5" x2="10" y2="13" stroke="#94a3b8" stroke-width="1"/>
     </svg>
     <span class="text-white font-bold text-sm tracking-tight">MER Editor</span>
-    <span id="dirty-dot" class="text-amber-400 text-lg leading-none" style="display:none" title="Alterações não salvas">●</span>
+    <span id="dirty-dot" class="text-amber-400 text-lg leading-none" style="display:none" aria-live="polite" aria-label="Alterações não salvas">●</span>
   </div>
 
   <div class="tb-sep"></div>
 
   <!-- File -->
-  <button id="btn-new" class="tb-btn" title="Novo diagrama (Ctrl+N)">
+  <button id="btn-new" class="tb-btn" data-tooltip="Criar novo diagrama (limpa o canvas atual)">
     <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h7l4 4v8H2V2zm7 0v4h4"/></svg>
     <span class="tb-label">Novo</span>
   </button>
-  <button id="btn-open" class="tb-btn" title="Abrir arquivo .mer">
+  <button id="btn-open" class="tb-btn" data-tooltip="Abrir arquivo .mer salvo">
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 4h5l2 2h7v8H1V4z"/></svg>
     <span class="tb-label">Abrir</span>
   </button>
-  <button id="btn-save" class="tb-btn tb-btn-primary" title="Salvar como .mer">
+  <button id="btn-save" class="tb-btn tb-btn-primary" data-tooltip="Salvar diagrama como arquivo .mer">
     <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h9l3 3v9H2V2zm3 8h6M8 4v6"/></svg>
     <span class="tb-label">Salvar</span>
   </button>
@@ -50,48 +54,79 @@
   <div class="tb-sep"></div>
 
   <!-- Edit -->
-  <button id="btn-undo" class="tb-btn" title="Desfazer (Ctrl+Z)" disabled>
+  <button id="btn-undo" class="tb-btn" data-tooltip="Desfazer última ação (Ctrl+Z)" disabled>
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8a5 5 0 1 0 1-3H1V2"/></svg>
     <span class="tb-label">Desfazer</span>
   </button>
-  <button id="btn-redo" class="tb-btn" title="Refazer (Ctrl+Y)" disabled>
-    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" transform="scale(-1,1) translate(-16,0)"><path d="M3 8a5 5 0 1 0 1-3H1V2"/></svg>
+  <button id="btn-redo" class="tb-btn" data-tooltip="Refazer ação desfeita (Ctrl+Y)" disabled>
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><g transform="translate(16,0) scale(-1,1)"><path d="M3 8a5 5 0 1 0 1-3H1V2"/></g></svg>
     <span class="tb-label">Refazer</span>
   </button>
 
   <div class="tb-sep"></div>
 
   <!-- Zoom -->
-  <button id="btn-zoom-out" class="tb-btn" title="Diminuir zoom (Ctrl+-)">
+  <button id="btn-zoom-out" class="tb-btn" data-tooltip="Diminuir zoom (Ctrl+-)" aria-label="Diminuir zoom">
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6.5" cy="6.5" r="4.5"/><line x1="10" y1="10" x2="14" y2="14"/><line x1="4.5" y1="6.5" x2="8.5" y2="6.5"/></svg>
   </button>
-  <span class="text-xs text-slate-400 tabular-nums w-10 text-center" id="status-zoom">100%</span>
-  <button id="btn-zoom-in" class="tb-btn" title="Aumentar zoom (Ctrl+=)">
+  <span class="text-xs text-slate-400 tabular-nums w-10 text-center" id="status-zoom-toolbar" aria-hidden="true">100%</span>
+  <button id="btn-zoom-in" class="tb-btn" data-tooltip="Aumentar zoom (Ctrl+=)" aria-label="Aumentar zoom">
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6.5" cy="6.5" r="4.5"/><line x1="10" y1="10" x2="14" y2="14"/><line x1="6.5" y1="4.5" x2="6.5" y2="8.5"/><line x1="4.5" y1="6.5" x2="8.5" y2="6.5"/></svg>
   </button>
-  <button id="btn-zoom-fit" class="tb-btn" title="Ajustar ao canvas">
+  <button id="btn-zoom-fit" class="tb-btn" data-tooltip="Centralizar e ajustar o diagrama na tela" aria-label="Ajustar ao canvas">
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6"/><rect x="9" y="1" width="6" height="6"/><rect x="1" y="9" width="6" height="6"/><rect x="9" y="9" width="6" height="6"/></svg>
     <span class="tb-label">Ajustar</span>
   </button>
-  <button id="btn-zoom-reset" class="tb-btn" title="100%"><span class="tb-label">1:1</span></button>
+  <button id="btn-zoom-reset" class="tb-btn" data-tooltip="Redefinir zoom para 100%" aria-label="Zoom 100%"><span class="tb-label">1:1</span></button>
+  <button id="btn-shortcuts" class="tb-btn" data-tooltip="Atalhos de teclado" aria-label="Ver atalhos de teclado">
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+      <rect x="1" y="3" width="14" height="10" rx="2"/>
+      <line x1="4" y1="7" x2="4" y2="7" stroke-linecap="round" stroke-width="2"/>
+      <line x1="8" y1="7" x2="8" y2="7" stroke-linecap="round" stroke-width="2"/>
+      <line x1="12" y1="7" x2="12" y2="7" stroke-linecap="round" stroke-width="2"/>
+      <line x1="5" y1="10" x2="11" y2="10" stroke-linecap="round" stroke-width="2"/>
+    </svg>
+    <span class="tb-label">Atalhos</span>
+  </button>
 
   <div class="flex-1"></div>
 
   <!-- Right side -->
-  <button id="btn-props" class="tb-btn tb-mobile-only" title="Painel de propriedades">
+  <button id="btn-props" class="tb-btn tb-mobile-only" data-tooltip="Painel de propriedades" aria-label="Abrir painel de propriedades">
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="14" height="14" rx="1"/><line x1="5" y1="1" x2="5" y2="15"/><line x1="8" y1="5" x2="13" y2="5"/><line x1="8" y1="8" x2="13" y2="8"/><line x1="8" y1="11" x2="13" y2="11"/></svg>
   </button>
-  <button id="btn-download" class="tb-btn" title="Baixar diagrama como SVG">
+  <button id="btn-download" class="tb-btn" data-tooltip="Baixar diagrama como SVG" aria-label="Baixar diagrama como SVG">
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v8M5 7l3 3 3-3"/><path d="M2 11v2a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-2"/></svg>
     <span class="tb-label">Baixar</span>
   </button>
-  <button id="btn-dict" class="tb-btn" title="Dicionário de dados">
+  <button id="btn-dict" class="tb-btn" data-tooltip="Abrir dicionário de dados do diagrama" aria-label="Abrir dicionário de dados">
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="1"/><line x1="2" y1="6" x2="14" y2="6"/><line x1="2" y1="10" x2="14" y2="10"/><line x1="6" y1="6" x2="6" y2="14"/></svg>
     <span class="tb-label">Dicionário</span>
   </button>
-  <button id="btn-print" class="tb-btn" title="Imprimir diagrama">
+  <button id="btn-print" class="tb-btn" data-tooltip="Imprimir diagrama" aria-label="Imprimir diagrama">
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="10" height="7" rx="1"/><path d="M4 6V3h8v3"/><rect x="5" y="10" width="6" height="3"/></svg>
     <span class="tb-label">Imprimir</span>
+  </button>
+
+  <div class="tb-sep"></div>
+
+  <!-- Theme toggles -->
+  <button id="btn-dark-mode" class="tb-btn" aria-pressed="false"
+    data-tooltip="Alternar modo noturno" aria-label="Alternar modo noturno">
+    <!-- Ícone lua (modo escuro inativo) -->
+    <svg id="icon-dark-mode" width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false">
+      <path d="M13.5 9.5a6 6 0 0 1-7-7 6 6 0 1 0 7 7z"/>
+    </svg>
+    <span class="tb-label">Noturno</span>
+  </button>
+
+  <button id="btn-high-contrast" class="tb-btn" aria-pressed="false"
+    data-tooltip="Alternar alto contraste" aria-label="Alternar alto contraste">
+    <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+      <circle cx="8" cy="8" r="7" fill="currentColor" stroke="currentColor" stroke-width="1"/>
+      <path d="M8 1a7 7 0 0 1 0 14V1z" fill="var(--tb-btn-contrast-half, #1e293b)"/>
+    </svg>
+    <span class="tb-label">Contraste</span>
   </button>
 </header>
 
@@ -99,8 +134,8 @@
 <div class="flex flex-1 overflow-hidden">
 
   <!-- ────────────────────────────────────────────── TOOLBOX (left) ───────── -->
-  <aside id="toolbox"
-    class="w-44 bg-slate-800 border-r border-slate-700/60 flex flex-col overflow-y-auto flex-shrink-0">
+  <aside id="toolbox" aria-label="Caixa de ferramentas"
+    class="bg-slate-800 border-r border-slate-700/60 flex flex-col overflow-y-auto flex-shrink-0">
 
     <div class="px-3 pt-3 pb-1 text-xs font-bold text-slate-500 uppercase tracking-widest">Ferramentas</div>
 
@@ -108,23 +143,15 @@
     <div class="px-3 pt-2 pb-0.5 text-xs text-slate-600 font-semibold">Entidades</div>
     <div class="px-2 space-y-0.5 pb-1">
 
-      <button class="toolbox-item" data-tool-kind="entity" draggable="true" title="Entidade forte"
-        data-info="Representa um objeto do mundo real com existência independente. Ex: Pessoa, Produto, Pedido. Possui atributos próprios e ao menos uma chave primária.">
+      <button class="toolbox-item" data-tool-kind="entity" draggable="true"
+        aria-label="Entidade — arraste para o canvas ou clique para adicionar"
+        data-tooltip="Entidade — representa um objeto do mundo real (ex: Cliente, Produto)"
+        data-info="Representa um objeto do mundo real com existência independente. Ex: Pessoa, Produto, Pedido. Use o painel de propriedades para marcar como Entidade Fraca.">
         <svg class="toolbox-icon" viewBox="0 0 24 24" fill="none">
           <rect x="3" y="7" width="18" height="10" rx="2" stroke="#94a3b8" stroke-width="1.5" fill="#1e293b"/>
           <text x="12" y="12.5" text-anchor="middle" dominant-baseline="central" font-size="6" fill="#94a3b8" font-family="sans-serif">ENTIDADE</text>
         </svg>
         <span class="toolbox-label">Entidade</span>
-      </button>
-
-      <button class="toolbox-item" data-tool-kind="weak_entity" draggable="true" title="Entidade fraca"
-        data-info="Depende de outra entidade para existir — não possui chave primária própria. Usa uma chave parcial combinada com a chave da entidade proprietária. Ex: Dependente (de Funcionário).">
-        <svg class="toolbox-icon" viewBox="0 0 24 24" fill="none">
-          <rect x="3" y="7" width="18" height="10" rx="2" stroke="#94a3b8" stroke-width="1.5" fill="#1e293b"/>
-          <rect x="5" y="9" width="14" height="6" rx="1" stroke="#94a3b8" stroke-width="0.8" fill="none"/>
-          <text x="12" y="12.5" text-anchor="middle" dominant-baseline="central" font-size="5" fill="#94a3b8" font-family="sans-serif">ENT.FRACA</text>
-        </svg>
-        <span class="toolbox-label">Ent. Fraca</span>
       </button>
     </div>
 
@@ -132,41 +159,15 @@
     <div class="px-3 pt-2 pb-0.5 text-xs text-slate-600 font-semibold">Atributos</div>
     <div class="px-2 space-y-0.5 pb-1">
 
-      <button class="toolbox-item" data-tool-kind="attribute" draggable="true" title="Atributo simples"
-        data-info="Propriedade que descreve uma entidade ou relacionamento. Armazena um único valor simples. Ex: nome, preço, data_nascimento.">
+      <button class="toolbox-item" data-tool-kind="attribute" draggable="true"
+        aria-label="Atributo — arraste para o canvas ou clique para adicionar"
+        data-tooltip="Atributo — propriedade de uma entidade ou relacionamento"
+        data-info="Propriedade que descreve uma entidade ou relacionamento. Use o painel de propriedades para configurar PK, multivalorado, derivado e outras restrições.">
         <svg class="toolbox-icon" viewBox="0 0 24 24" fill="none">
           <ellipse cx="12" cy="12" rx="9" ry="5.5" stroke="#60a5fa" stroke-width="1.5" fill="#172554"/>
           <text x="12" y="12" text-anchor="middle" dominant-baseline="central" font-size="5" fill="#60a5fa" font-family="sans-serif">attr</text>
         </svg>
         <span class="toolbox-label">Atributo</span>
-      </button>
-
-      <button class="toolbox-item" data-tool-kind="attribute" data-preset="pk" draggable="true" title="Atributo chave (PK)"
-        data-info="Identificador único da entidade — nenhuma linha pode ter o mesmo valor. Representado sublinhado na notação MER. Gera uma coluna PK na tabela resultante. Ex: id_cliente.">
-        <svg class="toolbox-icon" viewBox="0 0 24 24" fill="none">
-          <ellipse cx="12" cy="12" rx="9" ry="5.5" stroke="#3b82f6" stroke-width="1.5" fill="#172554"/>
-          <text x="12" y="12" text-anchor="middle" dominant-baseline="central" font-size="5" fill="#3b82f6" font-weight="bold" font-family="sans-serif" text-decoration="underline">chave</text>
-        </svg>
-        <span class="toolbox-label">Chave (PK)</span>
-      </button>
-
-      <button class="toolbox-item" data-tool-kind="attribute" data-preset="multivalued" draggable="true" title="Atributo multivalorado"
-        data-info="Pode conter mais de um valor para um mesmo registro. Representado com elipse dupla. Normalmente vira uma tabela separada no modelo relacional. Ex: telefones, e-mails.">
-        <svg class="toolbox-icon" viewBox="0 0 24 24" fill="none">
-          <ellipse cx="12" cy="12" rx="9" ry="5.5" stroke="#60a5fa" stroke-width="1.5" fill="#172554"/>
-          <ellipse cx="12" cy="12" rx="6.5" ry="3.5" stroke="#60a5fa" stroke-width="0.8" fill="none"/>
-          <text x="12" y="12" text-anchor="middle" dominant-baseline="central" font-size="4.5" fill="#60a5fa" font-family="sans-serif">multi</text>
-        </svg>
-        <span class="toolbox-label">Multivalorado</span>
-      </button>
-
-      <button class="toolbox-item" data-tool-kind="attribute" data-preset="derived" draggable="true" title="Atributo derivado"
-        data-info="Calculado a partir de outros atributos — não é armazenado diretamente. Representado com elipse tracejada. Ex: idade (derivada de data_nascimento), total_pedido.">
-        <svg class="toolbox-icon" viewBox="0 0 24 24" fill="none">
-          <ellipse cx="12" cy="12" rx="9" ry="5.5" stroke="#60a5fa" stroke-width="1.5" fill="#172554" stroke-dasharray="4 2"/>
-          <text x="12" y="12" text-anchor="middle" dominant-baseline="central" font-size="5" fill="#60a5fa" font-family="sans-serif">derivado</text>
-        </svg>
-        <span class="toolbox-label">Derivado</span>
       </button>
     </div>
 
@@ -174,23 +175,15 @@
     <div class="px-3 pt-2 pb-0.5 text-xs text-slate-600 font-semibold">Relacionamentos</div>
     <div class="px-2 space-y-0.5 pb-1">
 
-      <button class="toolbox-item" data-tool-kind="relationship" draggable="true" title="Relacionamento"
-        data-info="Associação entre duas ou mais entidades. Representado por um losango. Pode ter atributos próprios e cardinalidade (1:1, 1:N, N:M). Ex: Cliente realiza Pedido.">
+      <button class="toolbox-item" data-tool-kind="relationship" draggable="true"
+        aria-label="Relacionamento — arraste para o canvas ou clique para adicionar"
+        data-tooltip="Relacionamento — associação entre entidades"
+        data-info="Associação entre duas ou mais entidades. Representado por um losango. Use o painel de propriedades para marcar como Relacionamento Identificador.">
         <svg class="toolbox-icon" viewBox="0 0 24 24" fill="none">
           <polygon points="12,3 21,12 12,21 3,12" stroke="#d97706" stroke-width="1.5" fill="#1c1304"/>
           <text x="12" y="12" text-anchor="middle" dominant-baseline="central" font-size="4" fill="#d97706" font-family="sans-serif">rel</text>
         </svg>
         <span class="toolbox-label">Relacionamento</span>
-      </button>
-
-      <button class="toolbox-item" data-tool-kind="weak_relationship" draggable="true" title="Relacionamento identificador"
-        data-info="Conecta uma entidade fraca à sua entidade proprietária. Representado por losango duplo. Identifica a entidade fraca em conjunto com a chave da entidade forte.">
-        <svg class="toolbox-icon" viewBox="0 0 24 24" fill="none">
-          <polygon points="12,3 21,12 12,21 3,12" stroke="#d97706" stroke-width="1.5" fill="#1c1304"/>
-          <polygon points="12,6 18,12 12,18 6,12" stroke="#d97706" stroke-width="0.8" fill="none"/>
-          <text x="12" y="12" text-anchor="middle" dominant-baseline="central" font-size="3.5" fill="#d97706" font-family="sans-serif">id.rel</text>
-        </svg>
-        <span class="toolbox-label">Rel. Fraca</span>
       </button>
     </div>
 
@@ -198,7 +191,9 @@
     <div class="px-3 pt-2 pb-0.5 text-xs text-slate-600 font-semibold">Outros</div>
     <div class="px-2 space-y-0.5 pb-2">
 
-      <button class="toolbox-item" data-tool-kind="aggregation" draggable="true" title="Agregação"
+      <button class="toolbox-item" data-tool-kind="aggregation" draggable="true"
+        aria-label="Agregação — arraste para o canvas ou clique para adicionar"
+        data-tooltip="Agregação — agrupa um relacionamento como entidade"
         data-info="Trata um relacionamento como uma entidade de nível superior, permitindo associá-lo a outro relacionamento. Útil quando um relacionamento precisa participar de outro. Representado por um retângulo tracejado ao redor do grupo.">
         <svg class="toolbox-icon" viewBox="0 0 24 24" fill="none">
           <rect x="2" y="4" width="20" height="16" rx="3" stroke="#94a3b8" stroke-width="1.5" fill="#0f172a" stroke-dasharray="5 2.5"/>
@@ -207,7 +202,9 @@
         <span class="toolbox-label">Agregação</span>
       </button>
 
-      <button class="toolbox-item" data-tool-kind="generalization" draggable="true" title="Generalização/Especialização"
+      <button class="toolbox-item" data-tool-kind="generalization" draggable="true"
+        aria-label="Generalização/Especialização — arraste para o canvas ou clique para adicionar"
+        data-tooltip="Generalização/Especialização — hierarquia entre entidades"
         data-info="Hierarquia entre entidades: a superclasse compartilha atributos com as subclasses especializadas. Ex: Pessoa → Funcionário, Cliente. Pode ser disjunta (d) ou sobreponível (o).">
         <svg class="toolbox-icon" viewBox="0 0 24 24" fill="none">
           <polygon points="12,4 21,18 3,18" stroke="#16a34a" stroke-width="1.5" fill="#052e16"/>
@@ -248,7 +245,8 @@
 
   <!-- ─────────────────────────────────────────────── CANVAS (center) ───── -->
   <div id="canvas-container" class="flex-1 relative overflow-hidden">
-    <svg id="mer-canvas" class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+    <svg id="mer-canvas" class="w-full h-full" xmlns="http://www.w3.org/2000/svg"
+      role="application" aria-label="Canvas de diagrama ER — use Tab para navegar nos elementos" tabindex="0">
       <defs>
         <filter id="node-shadow" x="-20%" y="-20%" width="140%" height="140%">
           <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="rgba(0,0,0,0.15)"/>
@@ -259,6 +257,8 @@
       <g id="viewport">
         <g id="edges-layer"></g>
         <g id="nodes-layer"></g>
+        <!-- card-labels-layer: cardinality labels above nodes -->
+        <g id="card-labels-layer"></g>
         <!-- canvas-overlay: rubber band + progress edge (world/canvas coords) -->
         <g id="canvas-overlay"></g>
       </g>
@@ -267,7 +267,7 @@
     </svg>
 
     <!-- Welcome hint (shown when canvas is empty) -->
-    <div id="canvas-hint"
+    <div id="canvas-hint" role="status" aria-live="polite"
       class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-slate-400 select-none">
       <div class="text-5xl mb-4 opacity-20">⊡</div>
       <p class="text-base opacity-30">Arraste componentes da barra lateral</p>
@@ -277,7 +277,7 @@
 
   <!-- ──────────────────────────────────────── PROPERTIES PANEL (right) ──── -->
   <div id="props-backdrop"></div>
-  <aside id="aside-props" class="w-64 bg-white border-l border-slate-200 flex flex-col overflow-hidden flex-shrink-0">
+  <aside id="aside-props" aria-label="Painel de propriedades" aria-hidden="true" class="bg-white border-l border-slate-200 flex flex-col overflow-hidden flex-shrink-0">
     <div class="px-4 py-3 border-b border-slate-100 flex-shrink-0">
       <h2 class="text-xs font-bold text-slate-500 uppercase tracking-widest">Propriedades</h2>
     </div>
@@ -288,8 +288,8 @@
 <!-- ══════════════════════════════════════════════════════════════ STATUS BAR ══ -->
 <footer class="flex items-center h-6 px-4 bg-slate-900 border-t border-slate-700/50 flex-shrink-0 gap-4 text-xs text-slate-500">
   <span>Zoom: <span id="status-zoom" class="text-slate-400 tabular-nums">100%</span></span>
-  <span id="status-sel" class="text-blue-400"></span>
-  <span id="status-nodes" class="text-slate-600">0 nó(s) · 0 conexão(ões)</span>
+  <span id="status-sel" class="text-blue-400" aria-live="polite" aria-atomic="true"></span>
+  <span id="status-nodes" class="text-slate-600" aria-live="polite" aria-atomic="true">0 nó(s) · 0 conexão(ões)</span>
   <span class="ml-auto text-slate-700 text-xs">
     Requer servidor HTTP —
     <code class="text-slate-500">python3 -m http.server 8080</code>
@@ -297,16 +297,20 @@
 </footer>
 
 <!-- ══════════════════════════════════════════════ DATA DICTIONARY MODAL ══ -->
-<dialog id="dict-dialog">
+<dialog id="dict-dialog" aria-labelledby="dict-dialog-title" aria-modal="true">
   <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white flex-shrink-0">
     <div>
-      <h2 class="text-lg font-bold text-slate-800">Dicionário de Dados</h2>
+      <h2 id="dict-dialog-title" class="text-lg font-bold text-slate-800">Dicionário de Dados</h2>
       <p class="text-xs text-slate-400 mt-0.5">Gerado automaticamente a partir do diagrama MER</p>
     </div>
     <div class="flex gap-2">
       <button id="dict-print"
         class="px-3 py-1.5 text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors font-medium">
         Imprimir
+      </button>
+      <button id="dict-export-csv"
+        class="px-3 py-1.5 text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors font-medium">
+        Exportar CSV
       </button>
       <button id="dict-close"
         class="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium">
@@ -317,11 +321,29 @@
   <div id="dict-content" class="px-6 py-5 overflow-y-auto" style="max-height:calc(100vh - 180px)"></div>
 </dialog>
 
+<!-- ══════════════════════════════════════════════ KEYBOARD SHORTCUTS ══ -->
+<dialog id="shortcuts-dialog" aria-labelledby="shortcuts-dialog-title" aria-modal="true">
+  <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white flex-shrink-0">
+    <div>
+      <h2 id="shortcuts-dialog-title" class="text-lg font-bold text-slate-800">Atalhos de Teclado</h2>
+      <p class="text-xs text-slate-400 mt-0.5">Referência rápida de todos os atalhos disponíveis</p>
+    </div>
+    <button id="shortcuts-close"
+      class="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium">
+      Fechar
+    </button>
+  </div>
+  <div class="px-6 py-5 overflow-y-auto" style="max-height:calc(100vh - 180px)">
+    <div id="shortcuts-grid"></div>
+  </div>
+</dialog>
+
 <!-- ══════════════════════════════════════════════════ COOKIE CONSENT ══ -->
-<div id="cookie-banner">
+<div id="cookie-banner" role="dialog" aria-labelledby="cookie-banner-title" aria-describedby="cookie-banner-desc" aria-modal="true">
   <div id="cookie-banner-inner">
     <div id="cookie-banner-text">
-      <strong>Este site usa armazenamento local (localStorage)</strong> para salvar automaticamente seu diagrama no navegador entre sessões. Nenhum dado é enviado a servidores externos.
+      <strong id="cookie-banner-title">Este site usa armazenamento local (localStorage)</strong>
+      <span id="cookie-banner-desc"> para salvar automaticamente seu diagrama no navegador entre sessões. Nenhum dado é enviado a servidores externos.</span>
     </div>
     <div id="cookie-banner-actions">
       <button id="cookie-decline" class="tb-btn">Recusar</button>

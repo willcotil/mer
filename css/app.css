@@ -2,16 +2,268 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
+/* ── CSS Custom Properties (light mode defaults) ─────────────────────────── */
+
+:root {
+  /* Application surfaces */
+  --bg-app:          #0f172a;    /* toolbar, footer, body */
+  --bg-surface:      #1e293b;    /* toolbox, dropdowns */
+  --bg-panel:        #ffffff;    /* properties panel */
+  --bg-panel-header: #f8fafc;
+
+  /* Borders */
+  --border-app:      rgba(255,255,255,0.1);
+  --border-panel:    #e2e8f0;
+  --border-subtle:   rgba(255,255,255,0.06);
+
+  /* Text */
+  --text-primary:    #f1f5f9;
+  --text-muted:      #94a3b8;
+  --text-panel:      #0f172a;
+  --text-panel-muted: #64748b;
+
+  /* Canvas */
+  --canvas-bg:       #e9eef5;
+  --canvas-dot:      #b0bbcc;
+
+  /* Toolbar button active state */
+  --tb-btn-active-bg:     rgba(59,130,246,0.2);
+  --tb-btn-active-border: rgba(59,130,246,0.5);
+  --tb-btn-active-color:  #93c5fd;
+  --tb-btn-contrast-half: #1e293b;
+
+  /* Inputs (properties panel) */
+  --input-bg:      #f8fafc;
+  --input-border:  #e2e8f0;
+  --input-color:   #0f172a;
+
+  /* Modal */
+  --modal-bg:      #ffffff;
+  --modal-border:  #e2e8f0;
+  --modal-text:    #1e293b;
+  --modal-head-bg: #f8fafc;
+  --modal-cell-border: #f1f5f9;
+}
+
+/* ── Dark mode overrides ──────────────────────────────────────────────────── */
+
+html.dark {
+  color-scheme: dark;
+
+  --bg-panel:        #1e293b;
+  --bg-panel-header: #0f172a;
+  --border-panel:    rgba(255,255,255,0.1);
+
+  --text-panel:      #f1f5f9;
+  --text-panel-muted: #94a3b8;
+
+  --canvas-bg:       #1a2233;
+  --canvas-dot:      #2d3f55;
+
+  --input-bg:      #0f172a;
+  --input-border:  rgba(255,255,255,0.12);
+  --input-color:   #f1f5f9;
+
+  --modal-bg:      #1e293b;
+  --modal-border:  rgba(255,255,255,0.1);
+  --modal-text:    #f1f5f9;
+  --modal-head-bg: #0f172a;
+  --modal-cell-border: rgba(255,255,255,0.06);
+}
+
+/* Elements that use light Tailwind classes — override for dark mode */
+html.dark body                { background-color: var(--bg-app) !important; }
+html.dark #toolbar            { background-color: var(--bg-app) !important; border-bottom-color: var(--border-app) !important; }
+html.dark #toolbox            { background-color: var(--bg-surface) !important; border-right-color: var(--border-app) !important; }
+html.dark #aside-props        { background-color: var(--bg-panel) !important; border-left-color: var(--border-panel) !important; color: var(--text-panel); }
+html.dark #aside-props h2     { color: var(--text-muted) !important; }
+html.dark footer              { background-color: var(--bg-app) !important; border-top-color: var(--border-app) !important; }
+
+/* Dark mode canvas background */
+html.dark #canvas-container {
+  background-color: var(--canvas-bg);
+  background-image: radial-gradient(circle, var(--canvas-dot) 0.8px, transparent 0.8px);
+}
+
+/* Dark mode modal (dict-dialog) */
+html.dark #dict-dialog                    { background: var(--modal-bg); color: var(--modal-text); }
+html.dark #dict-dialog .flex.items-center { background: var(--modal-head-bg); border-bottom-color: var(--modal-border); }
+html.dark #dict-dialog h2                 { color: var(--modal-text); }
+html.dark #dict-dialog p                  { color: var(--text-muted); }
+html.dark .dict-head                      { border-bottom-color: var(--modal-border); color: var(--text-muted); }
+html.dark .dict-cell                      { border-bottom-color: var(--modal-cell-border); color: var(--modal-text); }
+html.dark #dict-dialog button:not(#dict-close) { background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-panel); }
+
+/* Dark mode cookie banner */
+html.dark #cookie-banner { background: var(--bg-surface); border-top-color: var(--border-app); }
+
+/* ── High contrast overrides (higher specificity — placed after dark) ─────── */
+
+html.high-contrast {
+  color-scheme: dark;
+
+  --bg-app:          #000000;
+  --bg-surface:      #000000;
+  --bg-panel:        #111111;
+  --bg-panel-header: #000000;
+  --border-app:      #ffd700;
+  --border-panel:    #ffd700;
+  --border-subtle:   #ffd700;
+
+  --text-primary:    #ffffff;
+  --text-muted:      #ffffff;
+  --text-panel:      #ffffff;
+  --text-panel-muted: #ffffff;
+
+  --canvas-bg:       #000000;
+  --canvas-dot:      #ffd700;
+
+  --tb-btn-active-bg:     #ffd700;
+  --tb-btn-active-border: #ffd700;
+  --tb-btn-active-color:  #000000;
+  --tb-btn-contrast-half: #ffffff;
+
+  --input-bg:      #000000;
+  --input-border:  #ffd700;
+  --input-color:   #ffffff;
+
+  --modal-bg:      #000000;
+  --modal-border:  #ffd700;
+  --modal-text:    #ffffff;
+  --modal-head-bg: #111111;
+  --modal-cell-border: #ffd700;
+}
+
+html.high-contrast body                { background-color: #000000 !important; color: #ffffff !important; }
+html.high-contrast #toolbar            { background-color: #000000 !important; border-bottom: 2px solid #ffd700 !important; }
+html.high-contrast #toolbox            { background-color: #000000 !important; border-right: 2px solid #ffd700 !important; }
+html.high-contrast #aside-props        { background-color: #111111 !important; border-left: 2px solid #ffd700 !important; color: #ffffff !important; }
+html.high-contrast footer              { background-color: #000000 !important; border-top: 2px solid #ffd700 !important; color: #ffffff !important; }
+html.high-contrast #canvas-container {
+  background-color: #000000;
+  background-image: radial-gradient(circle, #ffd700 0.8px, transparent 0.8px);
+}
+
+/* High contrast — remove shadows and transitions that reduce clarity */
+html.high-contrast * {
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+html.high-contrast .mer-node.selected .shape-main {
+  filter: drop-shadow(0 0 6px #ffd700) !important;
+}
+
+/* High contrast modal */
+html.high-contrast #dict-dialog              { background: #000000; color: #ffffff; border: 2px solid #ffd700; }
+html.high-contrast #dict-dialog .flex.items-center { background: #111111; border-bottom: 2px solid #ffd700; }
+html.high-contrast #dict-dialog h2           { color: #ffffff; }
+html.high-contrast .dict-head               { border-bottom: 2px solid #ffd700; color: #ffffff; font-weight: 700; }
+html.high-contrast .dict-cell               { border-bottom: 1px solid #ffd700; color: #ffffff; }
+
+/* High contrast toolbar buttons */
+html.high-contrast .tb-btn                  { color: #ffffff; border-color: transparent; }
+html.high-contrast .tb-btn:hover:not(:disabled) { background: #ffd700 !important; color: #000000 !important; border-color: #ffd700 !important; }
+html.high-contrast .tb-sep                  { background: #ffd700; }
+
+/* High contrast toolbox */
+html.high-contrast .toolbox-item            { color: #ffffff; }
+html.high-contrast .toolbox-item:hover      { background: #ffd700; color: #000000; border-color: #ffd700; }
+html.high-contrast .toolbox-item.active     { background: #ffd700; color: #000000; border-color: #ffd700; }
+
+/* High contrast cookie banner */
+html.high-contrast #cookie-banner { background: #000000; border-top: 2px solid #ffd700; }
+html.high-contrast #cookie-banner-text { color: #ffffff; }
+html.high-contrast #cookie-banner-text strong { color: #ffd700; }
+
+/* ── Dark mode — SVG canvas elements ─────────────────────────────────────── */
+
+html.dark .mer-node[data-kind="entity"]           .shape-main,
+html.dark .mer-node[data-kind="weak_entity"]      .shape-main { fill: #1a3050; stroke: #60a5fa; }
+
+html.dark .mer-node[data-kind="attribute"]        .shape-main { fill: #1e2d5a; stroke: #7aa9f7; }
+
+html.dark .mer-node[data-kind="relationship"]     .shape-main,
+html.dark .mer-node[data-kind="weak_relationship"].shape-main { fill: #3a2308; stroke: #f59e0b; }
+
+html.dark .mer-node[data-kind="aggregation"]      .shape-main { fill: rgba(15,25,40,0.85); stroke: #64748b; }
+
+html.dark .mer-node[data-kind="generalization"]   .shape-main { fill: #0c2b17; stroke: #4ade80; }
+
+/* Node labels — light text in dark mode */
+html.dark .mer-node .node-label                              { fill: #e2e8f0; }
+html.dark .mer-node[data-kind="relationship"] .node-label,
+html.dark .mer-node[data-kind="weak_relationship"] .node-label { fill: #fcd34d; }
+html.dark .mer-node[data-kind="generalization"] .node-label  { fill: #86efac; }
+
+/* PK/AI badges in dark mode */
+html.dark .mer-node text[fill="#1d4ed8"] { fill: #93c5fd; }
+html.dark .mer-node text[fill="#7c3aed"] { fill: #c4b5fd; }
+
+/* Aggregation label */
+html.dark .mer-node[data-kind="aggregation"] text[fill="#64748b"] { fill: #94a3b8; }
+
+/* Edges */
+html.dark .mer-edge .edge-visual { stroke: #7094b8; }
+html.dark .mer-edge line          { stroke: #7094b8; }
+html.dark .mer-edge text          { fill: #cbd5e1; }
+
+/* Overlay handles */
+html.dark .handle-resize  { fill: #1e293b; stroke: #60a5fa; }
+html.dark .handle-connect { fill: #3b82f6; stroke: #e2e8f0; }
+
+/* Cardinality labels (rendered in cardLabelsLayer, outside .mer-edge) */
+html.dark #card-labels-layer text { fill: #cbd5e1; }
+
+/* ── High contrast — SVG canvas elements ─────────────────────────────────── */
+
+html.high-contrast .mer-node .shape-main {
+  fill: #000000 !important;
+  stroke: #ffd700 !important;
+  stroke-width: 2.5px !important;
+}
+
+html.high-contrast .mer-node .node-label { fill: #ffffff !important; }
+
+/* PK/AI badges */
+html.high-contrast .mer-node text[fill="#1d4ed8"],
+html.high-contrast .mer-node text[fill="#93c5fd"] { fill: #ffd700 !important; }
+html.high-contrast .mer-node text[fill="#7c3aed"],
+html.high-contrast .mer-node text[fill="#c4b5fd"] { fill: #ffffff !important; }
+
+/* Relationship / generalization labels */
+html.high-contrast .mer-node[data-kind="relationship"] .node-label,
+html.high-contrast .mer-node[data-kind="weak_relationship"] .node-label,
+html.high-contrast .mer-node[data-kind="generalization"] .node-label { fill: #ffffff !important; }
+
+/* Aggregation label */
+html.high-contrast .mer-node[data-kind="aggregation"] text { fill: #ffd700 !important; }
+
+/* Edges */
+html.high-contrast .mer-edge .edge-visual { stroke: #ffd700 !important; }
+html.high-contrast .mer-edge line          { stroke: #ffd700 !important; }
+html.high-contrast .mer-edge text          { fill: #ffffff !important; }
+html.high-contrast #card-labels-layer text { fill: #ffffff !important; }
+
+/* Overlay handles */
+html.high-contrast .handle-resize  { fill: #000000 !important; stroke: #ffd700 !important; }
+html.high-contrast .handle-connect { fill: #ffd700 !important; stroke: #000000 !important; }
+
 *, *::before, *::after { box-sizing: border-box; }
 
 body { font-family: 'Inter', 'Segoe UI', ui-sans-serif, system-ui, sans-serif; }
 
+/* ── Focus visible (WCAG 2.4.7) ─────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
+
 /* ── Canvas background ───────────────────────────────────────────────────── */
 
 #canvas-container {
-  background-color: #e9eef5;
+  background-color: var(--canvas-bg);
   background-image:
-    radial-gradient(circle, #b0bbcc 0.8px, transparent 0.8px);
+    radial-gradient(circle, var(--canvas-dot) 0.8px, transparent 0.8px);
   background-size: 24px 24px;
 }
 
@@ -44,50 +296,73 @@ body { font-family: 'Inter', 'Segoe UI', ui-sans-serif, system-ui, sans-serif; }
   border-color: rgba(59,130,246,0.5);
   color: #93c5fd;
 }
+.toolbox-item:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
 .toolbox-icon {
   width: 24px;
   height: 24px;
   flex-shrink: 0;
 }
-.toolbox-info-btn {
-  margin-left: auto;
-  flex-shrink: 0;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  font-size: 11px;
-  font-style: normal;
-  line-height: 16px;
-  text-align: center;
-  color: #475569;
-  background: rgba(255,255,255,0.07);
-  transition: background 0.12s, color 0.12s;
-  cursor: pointer;
-}
-.toolbox-item:hover .toolbox-info-btn { color: #94a3b8; background: rgba(255,255,255,0.12); }
-.toolbox-info-btn:hover { color: #e2e8f0 !important; background: rgba(255,255,255,0.2) !important; }
-
 /* ── Snap to grid ────────────────────────────────────────────────────────── */
 #toolbox-snap .toolbox-label-short { display: none; }
 
-/* ── Toolbox info tooltip ─────────────────────────────────────────────────── */
-#toolbox-tooltip {
+/* ── Global tooltip ──────────────────────────────────────────────────────── */
+#mer-tooltip {
   position: fixed;
   z-index: 9999;
-  max-width: 220px;
-  padding: 10px 12px;
-  background: #1e293b;
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  max-width: 260px;
+  padding: 7px 11px;
+  background: rgba(30,30,40,0.95);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 7px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.35);
   font-size: 12px;
-  line-height: 1.55;
-  color: #cbd5e1;
+  line-height: 1.5;
+  color: #e2e8f0;
   pointer-events: none;
+  white-space: normal;
+  word-break: break-word;
   opacity: 0;
-  transition: opacity 0.15s;
+  transform: translateY(4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
 }
-#toolbox-tooltip.visible { opacity: 1; }
+#mer-tooltip.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Seta do tooltip */
+#mer-tooltip::before {
+  content: '';
+  position: absolute;
+  border: 5px solid transparent;
+}
+#mer-tooltip[data-pos="top"]::before {
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-top-color: rgba(30,30,40,0.95);
+}
+#mer-tooltip[data-pos="bottom"]::before {
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-bottom-color: rgba(30,30,40,0.95);
+}
+#mer-tooltip[data-pos="right"]::before {
+  top: 50%;
+  right: 100%;
+  transform: translateY(-50%);
+  border-right-color: rgba(30,30,40,0.95);
+}
+#mer-tooltip[data-pos="left"]::before {
+  top: 50%;
+  left: 100%;
+  transform: translateY(-50%);
+  border-left-color: rgba(30,30,40,0.95);
+}
 
 /* ── Toolbar buttons ─────────────────────────────────────────────────────── */
 
@@ -112,6 +387,10 @@ body { font-family: 'Inter', 'Segoe UI', ui-sans-serif, system-ui, sans-serif; }
   color: #f1f5f9;
 }
 .tb-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.tb-btn:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
 .tb-btn-primary {
   background: rgba(59,130,246,0.15);
   border-color: rgba(59,130,246,0.35);
@@ -120,6 +399,19 @@ body { font-family: 'Inter', 'Segoe UI', ui-sans-serif, system-ui, sans-serif; }
 .tb-btn-primary:hover:not(:disabled) {
   background: rgba(59,130,246,0.25);
   color: #bfdbfe;
+}
+
+/* Active state for theme toggle buttons */
+.tb-btn-active {
+  background: var(--tb-btn-active-bg) !important;
+  border-color: var(--tb-btn-active-border) !important;
+  color: var(--tb-btn-active-color) !important;
+}
+.tb-btn-active:hover:not(:disabled) {
+  background: var(--tb-btn-active-bg) !important;
+  border-color: var(--tb-btn-active-border) !important;
+  color: var(--tb-btn-active-color) !important;
+  filter: brightness(1.15);
 }
 .tb-sep {
   width: 1px; height: 22px;
@@ -168,7 +460,7 @@ body { font-family: 'Inter', 'Segoe UI', ui-sans-serif, system-ui, sans-serif; }
   display: block;
   font-size: 11.5px;
   font-weight: 600;
-  color: #64748b;
+  color: var(--text-panel-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   margin-bottom: 4px;
@@ -177,17 +469,48 @@ body { font-family: 'Inter', 'Segoe UI', ui-sans-serif, system-ui, sans-serif; }
   width: 100%;
   padding: 6px 10px;
   font-size: 13px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--input-border);
   border-radius: 7px;
-  background: #f8fafc;
-  color: #0f172a;
+  background: var(--input-bg);
+  color: var(--input-color);
   transition: border-color 0.12s, box-shadow 0.12s;
   outline: none;
 }
-.prop-input:focus {
+.prop-input:focus,
+.prop-input:focus-visible {
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
-  background: #fff;
+  background: var(--input-bg);
+  outline: 2px solid #3b82f6;
+  outline-offset: 0;
+}
+
+/* High contrast: inputs with yellow borders */
+html.high-contrast .prop-input {
+  border: 2px solid #ffd700;
+  background: #000000;
+  color: #ffffff;
+}
+html.high-contrast .prop-input:focus,
+html.high-contrast .prop-input:focus-visible {
+  border-color: #ffffff;
+  box-shadow: none;
+  outline: 2px solid #ffffff;
+}
+input[type="color"]:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* ── Properties panel aside ─────────────────────────────────────────────── */
+
+#aside-props {
+  background-color: var(--bg-panel);
+  border-left-color: var(--border-panel);
+  color: var(--text-panel);
+}
+#aside-props h2 {
+  color: var(--text-panel-muted);
 }
 
 /* ── Dictionary modal ────────────────────────────────────────────────────── */
@@ -198,11 +521,8 @@ body { font-family: 'Inter', 'Segoe UI', ui-sans-serif, system-ui, sans-serif; }
   margin: auto;
   padding: 0;
   border: none;
-  border-radius: 14px;
   box-shadow: 0 25px 60px rgba(0,0,0,0.35);
   max-width: 860px;
-  width: calc(100vw - 48px);
-  max-height: calc(100vh - 48px);
   overflow: hidden;
 }
 #dict-dialog[open] {
@@ -226,6 +546,104 @@ body { font-family: 'Inter', 'Segoe UI', ui-sans-serif, system-ui, sans-serif; }
   border-bottom: 1px solid #f1f5f9;
   font-size: 13px;
 }
+
+/* ── Keyboard shortcuts modal ────────────────────────────────────────────── */
+
+#shortcuts-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  padding: 0;
+  border: none;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.35);
+  max-width: 560px;
+  width: calc(100vw - 32px);
+  overflow: hidden;
+  border-radius: 14px;
+}
+#shortcuts-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+#shortcuts-dialog::backdrop {
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(2px);
+}
+
+.shortcut-group { margin-bottom: 20px; }
+.shortcut-group:last-child { margin-bottom: 0; }
+
+.shortcut-group-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.shortcut-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.shortcut-table tr + tr td { border-top: 1px solid #f1f5f9; }
+
+.shortcut-keys {
+  padding: 5px 0;
+  white-space: nowrap;
+  width: 1%;
+  padding-right: 16px;
+  vertical-align: middle;
+}
+.shortcut-desc {
+  padding: 5px 0;
+  font-size: 13px;
+  color: #334155;
+  vertical-align: middle;
+}
+
+kbd {
+  display: inline-block;
+  padding: 2px 7px;
+  font-size: 11px;
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  font-weight: 600;
+  line-height: 1.5;
+  color: #334155;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-bottom-width: 2px;
+  border-radius: 5px;
+}
+
+.shortcut-plus {
+  display: inline-block;
+  margin: 0 2px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+/* Dark mode — shortcuts modal */
+html.dark #shortcuts-dialog                    { background: var(--modal-bg); color: var(--modal-text); }
+html.dark #shortcuts-dialog .flex.items-center { background: var(--modal-head-bg); border-bottom-color: var(--modal-border); }
+html.dark #shortcuts-dialog h2                 { color: var(--modal-text); }
+html.dark #shortcuts-dialog p                  { color: var(--text-muted); }
+html.dark .shortcut-group-title                { color: var(--text-muted); border-bottom-color: var(--modal-border); }
+html.dark .shortcut-table tr + tr td          { border-top-color: var(--modal-cell-border); }
+html.dark .shortcut-desc                       { color: var(--text-panel); }
+html.dark kbd                                  { color: #e2e8f0; background: #0f172a; border-color: rgba(255,255,255,0.2); }
+html.dark .shortcut-plus                       { color: var(--text-muted); }
+
+/* High contrast — shortcuts modal */
+html.high-contrast #shortcuts-dialog           { background: #000000 !important; color: #ffffff !important; border: 2px solid #ffd700 !important; }
+html.high-contrast #shortcuts-dialog .flex.items-center { background: #111111 !important; border-bottom: 2px solid #ffd700 !important; }
+html.high-contrast #shortcuts-dialog h2        { color: #ffffff !important; }
+html.high-contrast .shortcut-group-title       { color: #ffd700 !important; border-bottom-color: #ffd700 !important; }
+html.high-contrast .shortcut-table tr + tr td { border-top-color: #ffd700 !important; }
+html.high-contrast .shortcut-desc             { color: #ffffff !important; }
+html.high-contrast kbd                         { color: #000000 !important; background: #ffd700 !important; border-color: #ffd700 !important; }
 
 /* ── Cookie consent banner ───────────────────────────────────────────────── */
 
@@ -262,6 +680,7 @@ body { font-family: 'Inter', 'Segoe UI', ui-sans-serif, system-ui, sans-serif; }
 }
 #cookie-accept {
   padding: 7px 18px;
+  min-height: 44px;
   background: #3b82f6;
   color: #fff;
   border: none;
@@ -272,70 +691,111 @@ body { font-family: 'Inter', 'Segoe UI', ui-sans-serif, system-ui, sans-serif; }
   transition: background 0.12s;
 }
 #cookie-accept:hover { background: #2563eb; }
+#cookie-accept:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 2px;
+}
 #cookie-decline {
   color: #64748b;
   font-size: 13px;
+  min-height: 44px;
+  padding: 7px 12px;
 }
 #cookie-decline:hover:not(:disabled) { color: #94a3b8; background: transparent; }
+#cookie-decline:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
 
-/* ── Mobile (landscape phones & small screens) ───────────────────────────── */
+/* ── Mobile-first base (telas pequenas / padrão) ─────────────────────────── */
 
-.tb-mobile-only { display: none; }
+/* Toolbar: compacto, sem labels */
+.tb-label       { display: none; }
+.tb-btn         { padding: 5px 7px; }
+.tb-sep         { height: 18px; }
+.tb-mobile-only { display: inline-flex; }
 
-@media (max-width: 820px) {
-  /* Toolbar: icons only */
-  .tb-label { display: none; }
-  .tb-btn   { padding: 5px 7px; }
-  .tb-sep   { height: 18px; }
-  .tb-mobile-only { display: inline-flex; }
+/* Brand: esconde texto, mantém logo */
+#toolbar .flex.items-center.gap-2.mr-3 span:not(.text-amber-400) { display: none; }
 
-  /* Brand: hide text, keep logo */
-  #toolbar .flex.items-center.gap-2.mr-3 span:not(.text-amber-400) { display: none; }
+/* Toolbox: faixa estreita de ícones */
+#toolbox                         { width: 44px; overflow: visible; }
+#toolbox .px-3.pt-3              { display: none; }   /* "Ferramentas" heading */
+#toolbox .px-3.pt-2              { display: none; }   /* Section headings */
+.toolbox-label                   { display: none; }
+.toolbox-item                    { padding: 10px 0; min-height: 44px; justify-content: center; gap: 0; }
+#toolbox .mt-auto                { display: none; }   /* Tips section */
+#toolbox-snap .toolbox-label-short { display: inline; }
+#toolbox-snap select             { display: none; }
+#toolbox-snap label              { justify-content: center; }
 
-  /* Toolbox: icon-only narrow strip */
-  #toolbox {
-    width: 44px;
-    overflow: visible;
-  }
-  #toolbox .px-3.pt-3 { display: none; }        /* "Ferramentas" heading */
-  #toolbox .px-3.pt-2 { display: none; }        /* Section headings */
-  .toolbox-label   { display: none; }
-  .toolbox-info-btn { display: none; }
-  .toolbox-item {
-    padding: 9px 0;
-    justify-content: center;
-    gap: 0;
-  }
-  #toolbox .mt-auto { display: none; }           /* Tips section */
-  #toolbox-snap .toolbox-label-short { display: inline; }
-  #toolbox-snap select { display: none; }
-  #toolbox-snap label { justify-content: center; }
+/* Painel de propriedades: overlay deslizante */
+#props-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+  background: rgba(0,0,0,0.35);
+}
+#props-backdrop.open { display: block; }
 
-  /* Properties panel: overlay from right */
-  #props-backdrop {
-    display: none;
-    position: fixed;
-    inset: 0;
-    z-index: 49;
-    background: rgba(0,0,0,0.35);
-  }
-  #props-backdrop.open { display: block; }
+#aside-props {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  z-index: 50;
+  width: 240px;
+  transform: translateX(100%);
+  transition: transform 0.22s ease;
+  box-shadow: -4px 0 24px rgba(0,0,0,0.18);
+}
+#aside-props.open { transform: translateX(0); }
 
+/* Dicionário: ocupa quase toda a tela em mobile */
+#dict-dialog {
+  width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
+  border-radius: 10px;
+}
+
+/* ── Desktop (telas ≥ 821px) ─────────────────────────────────────────────── */
+
+@media (min-width: 821px) {
+  /* Toolbar: labels visíveis */
+  .tb-label       { display: inline; }
+  .tb-btn         { padding: 5px 10px; }
+  .tb-sep         { height: 22px; }
+  .tb-mobile-only { display: none; }
+
+  /* Brand: mostra texto */
+  #toolbar .flex.items-center.gap-2.mr-3 span:not(.text-amber-400) { display: inline; }
+
+  /* Toolbox: largura completa com labels */
+  #toolbox                         { width: 176px; overflow-y: auto; }
+  #toolbox .px-3.pt-3              { display: block; }
+  #toolbox .px-3.pt-2              { display: block; }
+  .toolbox-label                   { display: inline; }
+  .toolbox-item                    { padding: 7px 10px; justify-content: flex-start; gap: 8px; }
+  #toolbox .mt-auto                { display: block; }
+  #toolbox-snap .toolbox-label-short { display: none; }
+  #toolbox-snap select             { display: block; }
+  #toolbox-snap label              { justify-content: flex-start; }
+
+  /* Painel de propriedades: coluna estática */
+  #props-backdrop              { display: none !important; }
   #aside-props {
-    position: fixed;
-    top: 0; right: 0; bottom: 0;
-    z-index: 50;
-    width: 240px;
-    transform: translateX(100%);
-    transition: transform 0.22s ease;
-    box-shadow: -4px 0 24px rgba(0,0,0,0.18);
-  }
-  #aside-props.open {
-    transform: translateX(0);
+    position: static;
+    width: 256px;
+    transform: none;
+    transition: none;
+    box-shadow: none;
   }
 
-  /* Toolbox tooltip: open to the right of the icon */
-  #toolbox-tooltip { max-width: 200px; }
+  /* Dicionário: tamanho desktop */
+  #dict-dialog {
+    width: calc(100vw - 48px);
+    max-height: calc(100vh - 48px);
+    border-radius: 14px;
+  }
 }
 
 /* ── Print ───────────────────────────────────────────────────────────────── */

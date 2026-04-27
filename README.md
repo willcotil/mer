@@ -18,23 +18,70 @@ Ideal para estudantes, professores e desenvolvedores que precisam criar diagrama
 
 ## Funcionalidades
 
+### Canvas e interação
 - **Canvas SVG interativo** com zoom (scroll/pinch), pan (espaço + arrastar / dois dedos) e rubber-band selection
-- **Componentes MER completos:**
-  - Entidade forte e fraca
-  - Atributo simples, chave (PK), multivalorado, derivado e composto
-  - Relacionamento e relacionamento identificador (fraco)
-  - Agregação e Generalização/Especialização
-- **Ligações** saindo do centro dos componentes, sempre atrás dos nós
-- **Painel de propriedades** com edição de nome, tipo de dado, restrições (PK, FK, UK, NOT NULL, AI), aparência e cardinalidade
-- **Dicionário de dados** gerado automaticamente a partir do diagrama, com opção de impressão
 - **Snap à grade** configurável (8, 16, 24 ou 32 px) pelo centro dos objetos
-- **Download do diagrama** como arquivo SVG
+- **Histórico de undo/redo** com até 100 snapshots (`Ctrl+Z` / `Ctrl+Y`)
+- **Copiar, colar e duplicar** elementos via `Ctrl+C`, `Ctrl+V`, `Ctrl+D`
+- **Seleção múltipla** com `Shift+clique` ou arraste de área
+
+### Componentes MER
+- Entidade forte e fraca
+- Atributo simples, chave (PK), multivalorado, derivado e composto
+- Relacionamento e relacionamento identificador (fraco)
+- Agregação e Generalização/Especialização
+- **Ligações** com cardinalidade, participação total/parcial e waypoints editáveis
+
+### Interface e produtividade
+- **Painel de propriedades** com edição de nome, tipo de dado, restrições (PK, FK, UK, NOT NULL, AI), aparência e cardinalidade
+- **Dicionário de dados** gerado automaticamente a partir do diagrama, com exportação CSV e impressão
+- **Tooltips estilizados** em todos os botões, campos e itens do toolbox — com delay, posicionamento inteligente e seta direcional
+- **Modal de atalhos de teclado** (`?` na toolbar) com referência completa de todos os atalhos
 - **Salvar/Abrir** diagramas no formato `.mer` (JSON)
-- **Histórico de undo/redo** com até 100 snapshots
 - **Auto-save** no `localStorage` do navegador (com consentimento explícito)
-- **Responsivo** — funciona em desktops e smartphones em modo paisagem
-- **Tooltips explicativos** em cada componente do toolbox
-- Botões de informação (ⓘ) com descrição de cada elemento MER
+
+### Temas visuais
+- **Modo noturno** — paleta escura completa, incluindo nós do canvas, arestas e painel de propriedades; persiste no `localStorage`; respeita `prefers-color-scheme` do sistema
+- **Modo alto contraste** — fundo preto, texto branco, bordas amarelas, sem sombras; prioridade visual sobre o modo noturno; persiste no `localStorage`
+- Os dois modos são **mutuamente exclusivos** — ativar um desativa o outro automaticamente
+
+### Acessibilidade
+- Landmarks semânticos (`<header>`, `<main>`, `<aside>`, `<footer>`)
+- `aria-label` em todos os botões icon-only
+- `aria-pressed` dinâmico nos toggles de tema
+- `aria-hidden` e gerenciamento de foco no painel de propriedades (mobile)
+- `<label for>` associado a todos os inputs do painel
+- Fieldsets com legend para grupos de checkbox/radio
+- Tabelas do dicionário com `<caption>`, `scope="col"` e siglas anotadas
+- Focus trap no cookie banner; foco devolvido ao elemento de origem ao fechar modais
+- Touch targets mínimos de 44×44px em todos os controles mobile
+
+### Responsividade
+- Layout adaptado para smartphones em modo paisagem (`max-width: 820px`)
+- Toolbar em modo ícone-only no mobile
+- Toolbox colapsado em strip vertical no mobile
+- Painel de propriedades como overlay fixo no mobile, ativado por botão dedicado
+
+---
+
+## Atalhos de teclado
+
+| Ação | Atalho |
+|---|---|
+| Desfazer | `Ctrl+Z` |
+| Refazer | `Ctrl+Y` ou `Ctrl+Shift+Z` |
+| Copiar | `Ctrl+C` |
+| Colar | `Ctrl+V` |
+| Duplicar | `Ctrl+D` |
+| Selecionar tudo | `Ctrl+A` |
+| Excluir seleção | `Delete` ou `Backspace` |
+| Mover seleção | `↑ ↓ ← →` (1px) ou `Shift+↑↓←→` (10px) |
+| Cancelar / desselecionar | `Esc` |
+| Zoom + / − | `Ctrl+=` / `Ctrl+-` |
+| Salvar | `Ctrl+S` |
+| Abrir | `Ctrl+O` |
+| Novo diagrama | `Ctrl+N` |
+| Ver todos os atalhos | Botão `⌨` na toolbar |
 
 ---
 
@@ -45,8 +92,8 @@ Ideal para estudantes, professores e desenvolvedores que precisam criar diagrama
 | **HTML5 / SVG** | Estrutura e renderização do canvas |
 | **JavaScript ES Modules** | Arquitetura modular sem bundler |
 | **Tailwind CSS** (via CDN) | Estilização da interface |
-| **CSS puro** | Estilos do canvas, responsividade e animações |
-| **localStorage** | Persistência local do diagrama |
+| **CSS puro** | Temas, canvas, responsividade e animações |
+| **localStorage** | Persistência do diagrama e preferências de tema |
 
 Nenhuma dependência de backend. Nenhum framework JavaScript. Nenhum processo de build.
 
@@ -110,7 +157,7 @@ php -S localhost:8080
 mer/
 ├── index.html          # HTML principal + estrutura da UI
 ├── css/
-│   └── app.css         # Estilos do canvas, toolbox, modais e responsividade
+│   └── app.css         # Estilos, temas (dark/high-contrast), responsividade
 └── js/
     ├── main.js         # Bootstrap, wiring de botões e eventos globais
     ├── state.js        # Store central (MerState) com sistema de eventos
@@ -123,6 +170,10 @@ mer/
     ├── edges.js        # Renderização SVG das ligações
     ├── dictionary.js   # Modal do dicionário de dados
     ├── serializer.js   # Salvar/carregar arquivos .mer
+    ├── clipboard.js    # Copiar, colar e duplicar elementos
+    ├── theme.js        # Modo noturno e alto contraste
+    ├── tooltip.js      # Sistema global de tooltips
+    ├── shortcuts.js    # Modal de atalhos de teclado
     ├── grid.js         # Lógica de snap à grade
     └── utils.js        # Utilitários: coordenadas, SVG, medição de texto
 ```

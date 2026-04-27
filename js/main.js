@@ -5,7 +5,11 @@ import { initInteraction }                     from './interaction.js';
 import { initToolbox }                         from './toolbox.js';
 import { initPanel }                           from './panel.js';
 import { saveToFile, loadFromFile, newDiagram } from './serializer.js';
-import { showDataDictionary }                  from './dictionary.js';
+import { showDataDictionary, exportDictionaryCSV } from './dictionary.js';
+import { clipboard }                           from './clipboard.js';
+import { initTooltip }                         from './tooltip.js';
+import { initTheme, toggleDark, toggleHighContrast } from './theme.js';
+import { initShortcuts }                       from './shortcuts.js';
 
 // ─── Persistence (localStorage) ───────────────────────────────────────────────
 
@@ -35,7 +39,9 @@ function _loadSaved() {
 }
 
 function _initConsent() {
-  const banner = document.getElementById('cookie-banner');
+  const banner  = document.getElementById('cookie-banner');
+  const accept  = document.getElementById('cookie-accept');
+  const decline = document.getElementById('cookie-decline');
   if (!banner) return;
 
   if (_hasConsent()) {
@@ -45,36 +51,61 @@ function _initConsent() {
     return;
   }
 
-  // Show the banner
+  // Show the banner and move focus para o botão de aceitar
   banner.classList.add('visible');
+  accept?.focus();
 
-  document.getElementById('cookie-accept')?.addEventListener('click', () => {
-    localStorage.setItem(LS_CONSENT, '1');
+  // Focus trap dentro do banner enquanto visível
+  banner.addEventListener('keydown', e => {
+    if (e.key !== 'Tab') return;
+    const focusable = Array.from(banner.querySelectorAll('button:not([disabled])'));
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last  = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault(); last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault(); first.focus();
+    }
+  });
+
+  const _closeBanner = () => {
     banner.classList.remove('visible');
+    // Devolve foco ao canvas após fechar o banner
+    document.getElementById('mer-canvas')?.focus();
+  };
+
+  accept?.addEventListener('click', () => {
+    localStorage.setItem(LS_CONSENT, '1');
+    _closeBanner();
     _loadSaved();
     state.on('change', _autoSave);
   });
 
-  document.getElementById('cookie-decline')?.addEventListener('click', () => {
-    banner.classList.remove('visible');
-  });
+  decline?.addEventListener('click', _closeBanner);
 }
 
 // ─── Bootstrap ────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
-  const svg      = document.getElementById('mer-canvas');
-  const viewport = document.getElementById('viewport');
-  const nodesLyr = document.getElementById('nodes-layer');
-  const edgesLyr = document.getElementById('edges-layer');
-  const overlay  = document.getElementById('overlay-layer');
-  const panel    = document.getElementById('properties-panel');
+  // Theme must be initialized first to avoid flash of wrong theme
+  initTheme();
+
+  const svg           = document.getElementById('mer-canvas');
+  const viewport      = document.getElementById('viewport');
+  const nodesLyr      = document.getElementById('nodes-layer');
+  const edgesLyr      = document.getElementById('edges-layer');
+  const cardLabelsLyr = document.getElementById('card-labels-layer');
+  const overlay       = document.getElementById('overlay-layer');
+  const panel         = document.getElementById('properties-panel');
 
   // Init all modules
-  initRenderer(svg, viewport, nodesLyr, edgesLyr, overlay);
+  initRenderer(svg, viewport, nodesLyr, edgesLyr, cardLabelsLyr, overlay);
   initInteraction(svg, overlay);
   initToolbox(svg);
   initPanel(panel);
+  initTooltip();
+  initShortcuts();
 
   // Toolbar buttons
   _wire('btn-new',      () => newDiagram());
@@ -85,15 +116,18 @@ document.addEventListener('DOMContentLoaded', () => {
   _wire('btn-props',    () => _toggleProps());
   _wire('btn-download', () => _downloadSVG());
   _wire('btn-dict',     () => showDataDictionary());
-  _wire('btn-print',    () => _print());
+  _wire('btn-print',       () => _print());
+  _wire('btn-dark-mode',   () => toggleDark());
+  _wire('btn-high-contrast', () => toggleHighContrast());
   _wire('btn-zoom-in',  () => _zoom(1.25));
   _wire('btn-zoom-out', () => _zoom(0.8));
   _wire('btn-zoom-fit', () => _fitAll());
   _wire('btn-zoom-reset', () => state.setCanvas({ offsetX: 0, offsetY: 0, scale: 1 }));
 
   // Dialog
-  _wire('dict-close', () => document.getElementById('dict-dialog')?.close());
-  _wire('dict-print', () => _printDict());
+  _wire('dict-close',      () => document.getElementById('dict-dialog')?.close());
+  _wire('dict-print',      () => _printDict());
+  _wire('dict-export-csv', () => exportDictionaryCSV());
 
   // Status updates
   state.on('selection-change', _updateStatus);
@@ -111,11 +145,27 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Initial undo/redo button state
-  document.getElementById('btn-undo')?.setAttribute('disabled', '');
-  document.getElementById('btn-redo')?.setAttribute('disabled', '');
+  const btnUndo = document.getElementById('btn-undo');
+  const btnRedo = document.getElementById('btn-redo');
+  if (btnUndo) { btnUndo.disabled = true; btnUndo.setAttribute('aria-disabled', 'true'); }
+  if (btnRedo) { btnRedo.disabled = true; btnRedo.setAttribute('aria-disabled', 'true'); }
 
   _updateStatus();
   _initConsent();
+
+  // Inicializa estado de acessibilidade do painel de propriedades
+  _initPanelA11y();
+
+  // ─── Clipboard shortcuts ──────────────────────────────────────────────────
+  document.addEventListener('keydown', e => {
+    const tag = e.target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if (e.ctrlKey || e.metaKey) {
+      if (e.key === 'c') { e.preventDefault(); clipboard.copy();      return; }
+      if (e.key === 'v') { e.preventDefault(); clipboard.paste();     return; }
+      if (e.key === 'd') { e.preventDefault(); clipboard.duplicate(); return; }
+    }
+  });
 });
 
 // ─── Zoom ─────────────────────────────────────────────────────────────────────
@@ -211,13 +261,40 @@ function _printDict() {
 
 // ─── Properties panel toggle (mobile) ────────────────────────────────────────
 
-function _toggleProps(forceOpen) {
+function _isMobile() {
+  return window.innerWidth <= 820;
+}
+
+function _setPanelVisibility(open) {
   const panel    = document.getElementById('aside-props');
   const backdrop = document.getElementById('props-backdrop');
+  const btnProps = document.getElementById('btn-props');
   if (!panel) return;
-  const open = forceOpen ?? !panel.classList.contains('open');
+
   panel.classList.toggle('open', open);
   backdrop?.classList.toggle('open', open);
+
+  if (_isMobile()) {
+    panel.setAttribute('aria-hidden', open ? 'false' : 'true');
+    btnProps?.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) {
+      // Move focus para o painel ao abrir
+      const firstFocusable = panel.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      firstFocusable?.focus();
+    } else {
+      btnProps?.focus();
+    }
+  } else {
+    panel.removeAttribute('aria-hidden');
+    btnProps?.removeAttribute('aria-expanded');
+  }
+}
+
+function _toggleProps(forceOpen) {
+  const panel = document.getElementById('aside-props');
+  if (!panel) return;
+  const open = forceOpen ?? !panel.classList.contains('open');
+  _setPanelVisibility(open);
 }
 
 document.getElementById('props-backdrop')
@@ -277,13 +354,35 @@ function _downloadSVG() {
 // ─── Status bar ───────────────────────────────────────────────────────────────
 
 function _updateStatus() {
-  const zEl = document.getElementById('status-zoom');
+  const zEl        = document.getElementById('status-zoom');
+  const zToolbarEl = document.getElementById('status-zoom-toolbar');
   const sEl = document.getElementById('status-sel');
   const nEl = document.getElementById('status-nodes');
-  if (zEl) zEl.textContent = `${Math.round(state.canvas.scale * 100)}%`;
+  const zText = `${Math.round(state.canvas.scale * 100)}%`;
+  if (zEl)        zEl.textContent        = zText;
+  if (zToolbarEl) zToolbarEl.textContent = zText;
   if (sEl) sEl.textContent = state.selection.size > 0
     ? `${state.selection.size} selecionado(s)` : '';
   if (nEl) nEl.textContent = `${state.nodes.size} nó(s) · ${state.edges.size} conexão(ões)`;
+}
+
+// ─── Panel a11y init ──────────────────────────────────────────────────────────
+
+function _initPanelA11y() {
+  const panel = document.getElementById('aside-props');
+  if (!panel) return;
+
+  const update = () => {
+    if (_isMobile()) {
+      const isOpen = panel.classList.contains('open');
+      panel.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+    } else {
+      panel.removeAttribute('aria-hidden');
+    }
+  };
+
+  update();
+  window.addEventListener('resize', update);
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

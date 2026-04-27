@@ -8,64 +8,12 @@ let _svg         = null;
 let _activeTool  = null;  // kind string or null
 let _activePreset = null; // preset string or null
 
-// ─── Tooltip ──────────────────────────────────────────────────────────────────
-
-let _tooltip = null;
-
-function _initTooltip() {
-  _tooltip = document.createElement('div');
-  _tooltip.id = 'toolbox-tooltip';
-  document.body.appendChild(_tooltip);
-}
-
-function _showTooltip(text, anchorEl) {
-  if (!_tooltip) return;
-  _tooltip.textContent = text;
-  _tooltip.classList.remove('visible');
-
-  const rect = anchorEl.getBoundingClientRect();
-  // Position to the right of the toolbox item, vertically centered
-  const top = rect.top + rect.height / 2;
-  _tooltip.style.left = (rect.right + 10) + 'px';
-  _tooltip.style.top  = top + 'px';
-  _tooltip.style.transform = 'translateY(-50%)';
-
-  // Keep inside viewport vertically
-  requestAnimationFrame(() => {
-    const tr = _tooltip.getBoundingClientRect();
-    if (tr.bottom > window.innerHeight - 8) {
-      _tooltip.style.top = (window.innerHeight - 8 - tr.height) + 'px';
-      _tooltip.style.transform = '';
-    }
-    _tooltip.classList.add('visible');
-  });
-}
-
-function _hideTooltip() {
-  _tooltip?.classList.remove('visible');
-}
-
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
 export function initToolbox(svg) {
   _svg = svg;
-  _initTooltip();
 
   document.querySelectorAll('[data-tool-kind]').forEach(item => {
-    // Remove native title tooltip to avoid conflict with custom tooltip
-    item.removeAttribute('title');
-
-    // Inject info button if item has description
-    if (item.dataset.info) {
-      const btn = document.createElement('span');
-      btn.className = 'toolbox-info-btn';
-      btn.textContent = 'ⓘ';
-      btn.addEventListener('mouseenter', () => _showTooltip(item.dataset.info, item));
-      btn.addEventListener('mouseleave', _hideTooltip);
-      btn.addEventListener('click', e => e.stopPropagation());
-      item.appendChild(btn);
-    }
-
     // HTML5 drag-and-drop
     item.addEventListener('dragstart', e => {
       e.dataTransfer.setData('application/mer-kind',   item.dataset.toolKind);

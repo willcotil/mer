@@ -46,8 +46,14 @@ class History {
 function _updateUI() {
   const u = document.getElementById('btn-undo');
   const r = document.getElementById('btn-redo');
-  if (u) u.disabled = !history.canUndo();
-  if (r) r.disabled = !history.canRedo();
+  if (u) {
+    u.disabled = !history.canUndo();
+    u.setAttribute('aria-disabled', u.disabled ? 'true' : 'false');
+  }
+  if (r) {
+    r.disabled = !history.canRedo();
+    r.setAttribute('aria-disabled', r.disabled ? 'true' : 'false');
+  }
 }
 
 export const history = new History();

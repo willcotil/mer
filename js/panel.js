@@ -91,22 +91,44 @@ function _renderNodePanel(node) {
 
   if (kind !== 'aggregation') {
     html += `<div>
-      <label class="prop-label">Nome</label>
+      <label class="prop-label" for="prop-label" data-tooltip="Nome exibido no diagrama">Nome</label>
       <input type="text" id="prop-label" value="${escHtml(label)}"
         class="prop-input" placeholder="Nome do elemento">
     </div>`;
   }
 
+  if (kind === 'entity' || kind === 'weak_entity') {
+    html += `<fieldset class="space-y-1.5 border-0 p-0 m-0">
+      <legend class="prop-label">Tipo</legend>
+      ${_cb('prop-isWeak', 'Entidade Fraca', kind === 'weak_entity')}
+    </fieldset>`;
+  }
+
+  if (kind === 'relationship' || kind === 'weak_relationship') {
+    html += `<fieldset class="space-y-1.5 border-0 p-0 m-0">
+      <legend class="prop-label">Tipo</legend>
+      ${_cb('prop-isWeak', 'Relacionamento Identificador', kind === 'weak_relationship')}
+    </fieldset>`;
+  }
+
+  if (kind === 'entity' || kind === 'weak_entity' || kind === 'attribute') {
+    html += `<div>
+      <label class="prop-label" for="prop-description">Descrição</label>
+      <textarea id="prop-description" rows="3"
+        class="prop-input resize-none" placeholder="Descreva este elemento...">${escHtml(props.description || '')}</textarea>
+    </div>`;
+  }
+
   if (kind === 'attribute') {
     html += `<div>
-      <label class="prop-label">Tipo de Dado</label>
+      <label class="prop-label" for="prop-dataType">Tipo de Dado</label>
       <select id="prop-dataType" class="prop-input">
         ${DATA_TYPES.map(t => `<option${props.dataType===t?' selected':''}>${escHtml(t)}</option>`).join('')}
         <option value="${escHtml(props.dataType||'')}"${!DATA_TYPES.includes(props.dataType)?` selected`:''}>Personalizado</option>
       </select>
     </div>
-    <div class="space-y-1.5">
-      <label class="prop-label">Restrições</label>
+    <fieldset class="space-y-1.5 border-0 p-0 m-0">
+      <legend class="prop-label">Restrições</legend>
       ${_cb('prop-isPK',           'Chave Primária (PK)',  props.isPK)}
       ${_cb('prop-isUnique',       'Chave Única (UK)',     props.isUnique)}
       ${_cb('prop-isNotNull',      'Não Nulo (NOT NULL)',  props.isNotNull)}
@@ -114,35 +136,39 @@ function _renderNodePanel(node) {
       ${_cb('prop-isMultivalued',  'Multivalorado',        props.isMultivalued)}
       ${_cb('prop-isDerived',      'Derivado',             props.isDerived)}
       ${_cb('prop-isComposite',    'Composto',             props.isComposite)}
-    </div>`;
+    </fieldset>`;
   }
 
   if (kind === 'generalization') {
-    html += `<div class="space-y-1.5">
-      <label class="prop-label">Tipo de Especialização</label>
+    html += `<fieldset class="space-y-1.5 border-0 p-0 m-0">
+      <legend class="prop-label">Tipo de Especialização</legend>
       <label class="flex items-center gap-2 text-sm">
         <input type="radio" name="gen-type" value="disjoint" ${props.isDisjoint!==false?'checked':''}> Disjunto (d)
       </label>
       <label class="flex items-center gap-2 text-sm">
         <input type="radio" name="gen-type" value="overlapping" ${props.isDisjoint===false?'checked':''}> Sobreposição (o)
       </label>
-    </div>`;
+    </fieldset>`;
   }
 
   html += `<div class="pt-2 border-t border-slate-100">
-    <label class="prop-label">Aparência</label>
-    <div class="flex gap-3 mt-1">
-      <div>
-        <div class="text-xs text-slate-400 mb-1">Preenchimento</div>
-        <input type="color" id="prop-fill" value="${escHtml(style.fill||'#ffffff')}"
-          class="h-9 w-14 rounded cursor-pointer border border-slate-200 p-0.5 bg-white">
+    <fieldset class="border-0 p-0 m-0">
+      <legend class="prop-label">Aparência</legend>
+      <div class="flex gap-3 mt-1">
+        <div>
+          <label for="prop-fill" class="text-xs text-slate-400 mb-1 block" data-tooltip="Cor de preenchimento do elemento">Preenchimento</label>
+          <input type="color" id="prop-fill" value="${escHtml(style.fill||'#ffffff')}"
+            class="h-9 w-14 rounded cursor-pointer border border-slate-200 p-0.5 bg-white"
+            aria-label="Cor de preenchimento">
+        </div>
+        <div>
+          <label for="prop-stroke" class="text-xs text-slate-400 mb-1 block" data-tooltip="Cor da borda do elemento">Borda</label>
+          <input type="color" id="prop-stroke" value="${escHtml(style.stroke||'#334155')}"
+            class="h-9 w-14 rounded cursor-pointer border border-slate-200 p-0.5 bg-white"
+            aria-label="Cor da borda">
+        </div>
       </div>
-      <div>
-        <div class="text-xs text-slate-400 mb-1">Borda</div>
-        <input type="color" id="prop-stroke" value="${escHtml(style.stroke||'#334155')}"
-          class="h-9 w-14 rounded cursor-pointer border border-slate-200 p-0.5 bg-white">
-      </div>
-    </div>
+    </fieldset>
   </div>
 
   <div class="flex items-center gap-2 text-sm">
@@ -196,31 +222,31 @@ function _renderEdgePanel(edge) {
     </div>
 
     <div>
-      <label class="prop-label">Cardinalidade — ${srcName}</label>
+      <label class="prop-label" for="prop-srcCard" data-tooltip="Define quantas instâncias participam do relacionamento">Cardinalidade — ${srcName}</label>
       <select id="prop-srcCard" class="prop-input">${_cardOpts(sourceCardinality)}</select>
     </div>
     <div>
-      <label class="prop-label">Cardinalidade — ${tgtName}</label>
+      <label class="prop-label" for="prop-tgtCard" data-tooltip="Define quantas instâncias participam do relacionamento">Cardinalidade — ${tgtName}</label>
       <select id="prop-tgtCard" class="prop-input">${_cardOpts(targetCardinality)}</select>
     </div>
 
-    <div>
-      <label class="prop-label">Participação — ${srcName}</label>
+    <fieldset class="border-0 p-0 m-0">
+      <legend class="prop-label" data-tooltip="Total = todas as instâncias participam; Parcial = participação opcional">Participação — ${srcName}</legend>
       <div class="flex gap-4 text-sm mt-1">
         <label class="flex items-center gap-1.5"><input type="radio" name="src-part" value="partial" ${sourceParticipation!=='total'?'checked':''}> Parcial</label>
         <label class="flex items-center gap-1.5"><input type="radio" name="src-part" value="total"   ${sourceParticipation==='total'?'checked':''}>  Total</label>
       </div>
-    </div>
-    <div>
-      <label class="prop-label">Participação — ${tgtName}</label>
+    </fieldset>
+    <fieldset class="border-0 p-0 m-0">
+      <legend class="prop-label" data-tooltip="Total = todas as instâncias participam; Parcial = participação opcional">Participação — ${tgtName}</legend>
       <div class="flex gap-4 text-sm mt-1">
         <label class="flex items-center gap-1.5"><input type="radio" name="tgt-part" value="partial" ${targetParticipation!=='total'?'checked':''}> Parcial</label>
         <label class="flex items-center gap-1.5"><input type="radio" name="tgt-part" value="total"   ${targetParticipation==='total'?'checked':''}>  Total</label>
       </div>
-    </div>
+    </fieldset>
 
     <div>
-      <label class="prop-label">Chave Estrangeira (FK)</label>
+      <label class="prop-label" for="prop-fk">Chave Estrangeira (FK)</label>
       <select id="prop-fk" class="prop-input">
         <option value="">— sem FK —</option>
         ${allAttrs.map(a => `<option value="${a.id}"${fkAttributeId===a.id?' selected':''}>${escHtml(a.label)}</option>`).join('')}
@@ -248,6 +274,24 @@ function _wireNode(id) {
   q('#prop-label')?.addEventListener('input', e => {
     history.snapshotDebounced();
     state.updateNode(id, { label: e.target.value });
+  });
+
+  q('#prop-isWeak')?.addEventListener('change', e => {
+    const node = state.nodes.get(id);
+    if (!node) return;
+    history.snapshot();
+    const isEntity = node.kind === 'entity' || node.kind === 'weak_entity';
+    const newKind  = isEntity
+      ? (e.target.checked ? 'weak_entity'        : 'entity')
+      : (e.target.checked ? 'weak_relationship'  : 'relationship');
+    state.updateNode(id, { kind: newKind });
+    // Re-render panel so the heading updates
+    _renderPanel(id);
+  });
+
+  q('#prop-description')?.addEventListener('input', e => {
+    history.snapshotDebounced();
+    state.updateNode(id, { props: { description: e.target.value } });
   });
 
   q('#prop-dataType')?.addEventListener('change', e => {
@@ -321,8 +365,20 @@ function _wireEdge(id) {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+const _CB_TOOLTIPS = {
+  'prop-isPK':           'Marca o atributo como chave primária',
+  'prop-isUnique':       'Chave alternativa — valor único na tabela',
+  'prop-isNotNull':      'Campo obrigatório — não aceita valores nulos',
+  'prop-isAutoIncrement':'Valor gerado automaticamente pelo banco',
+  'prop-isMultivalued':  'Atributo que pode ter múltiplos valores (ex: telefones)',
+  'prop-isDerived':      'Atributo calculado a partir de outros atributos',
+  'prop-isComposite':    'Atributo formado por subatributos',
+  'prop-isWeak':         'Entidade ou relacionamento dependente de outro para existir',
+};
+
 function _cb(id, label, checked) {
-  return `<label class="flex items-center gap-2 text-sm cursor-pointer">
+  const tip = _CB_TOOLTIPS[id] ? ` data-tooltip="${_CB_TOOLTIPS[id]}"` : '';
+  return `<label class="flex items-center gap-2 text-sm cursor-pointer"${tip}>
     <input type="checkbox" id="${id}" ${checked?'checked':''}
       class="rounded border-slate-300 text-blue-500 cursor-pointer">
     ${label}
