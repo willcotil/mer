@@ -80,7 +80,7 @@ const KIND_NAME = {
 const DATA_TYPES = [
   'VARCHAR(50)','VARCHAR(255)','CHAR(10)','INT','BIGINT','SMALLINT',
   'DECIMAL(10,2)','FLOAT','DOUBLE','BOOLEAN','DATE','TIME','DATETIME',
-  'TIMESTAMP','TEXT','LONGTEXT','BLOB','UUID','SERIAL','JSON',
+  'TIMESTAMP','TEXT','LONGTEXT','BLOB','UUID','SERIAL','JSON','ENUM',
 ];
 
 function _renderNodePanel(node) {
@@ -120,12 +120,23 @@ function _renderNodePanel(node) {
   }
 
   if (kind === 'attribute') {
+    const isEnum = props.dataType === 'ENUM';
     html += `<div>
       <label class="prop-label" for="prop-dataType">Tipo de Dado</label>
       <select id="prop-dataType" class="prop-input">
         ${DATA_TYPES.map(t => `<option${props.dataType===t?' selected':''}>${escHtml(t)}</option>`).join('')}
         <option value="${escHtml(props.dataType||'')}"${!DATA_TYPES.includes(props.dataType)?` selected`:''}>Personalizado</option>
       </select>
+    </div>
+    <div id="prop-enum-section"${isEnum ? '' : ' style="display:none"'}>
+      <label class="prop-label" for="prop-enumValues">Valores do ENUM
+        <span class="text-xs text-slate-400 font-normal">(um por linha)</span>
+      </label>
+      <textarea id="prop-enumValues" rows="4"
+        class="prop-input resize-none font-mono text-xs"
+        placeholder="ativo&#10;inativo&#10;pendente"
+        data-tooltip="Liste os valores possíveis, um por linha"
+      >${escHtml((props.enumValues || []).join('\n'))}</textarea>
     </div>
     <fieldset class="space-y-1.5 border-0 p-0 m-0">
       <legend class="prop-label">Restrições</legend>
@@ -296,7 +307,16 @@ function _wireNode(id) {
 
   q('#prop-dataType')?.addEventListener('change', e => {
     history.snapshot();
-    state.updateNode(id, { props: { dataType: e.target.value } });
+    const newType = e.target.value;
+    state.updateNode(id, { props: { dataType: newType } });
+    const sec = q('#prop-enum-section');
+    if (sec) sec.style.display = newType === 'ENUM' ? '' : 'none';
+  });
+
+  q('#prop-enumValues')?.addEventListener('input', e => {
+    history.snapshotDebounced();
+    const values = e.target.value.split('\n').map(v => v.trim()).filter(Boolean);
+    state.updateNode(id, { props: { enumValues: values } });
   });
 
   ['isPK','isUnique','isNotNull','isAutoIncrement','isMultivalued','isDerived','isComposite'].forEach(p => {

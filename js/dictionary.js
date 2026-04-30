@@ -32,11 +32,14 @@ export function exportDictionaryCSV() {
     for (const attr of attrs) {
       const p    = attr.props || {};
       const fkR  = fkMap.get(attr.id) || '';
+      const csvType = (p.dataType === 'ENUM' && p.enumValues?.length)
+        ? `ENUM(${p.enumValues.join(',')})`
+        : (p.dataType || '');
       rows.push([
         entity.label,
         entityType,
         attr.label,
-        p.dataType        || '',
+        csvType,
         p.isPK            ? 'Sim' : '',
         fkR               ? 'Sim' : '',
         p.isUnique        ? 'Sim' : '',
@@ -163,14 +166,20 @@ function _attrRow(attr, fkMap) {
     ? `<span class="font-bold text-blue-700">${attrName}</span>${flags}`
     : `${attrName}${flags}`;
 
+  const typeCell = (p.dataType === 'ENUM')
+    ? `<div class="font-mono text-xs font-bold text-purple-700">ENUM</div>${
+        p.enumValues?.length
+          ? `<div class="text-xs text-slate-400 leading-tight mt-0.5">${escHtml(p.enumValues.slice(0, 5).join(', '))}${p.enumValues.length > 5 ? '…' : ''}</div>`
+          : '<div class="text-xs text-slate-300 italic">sem valores</div>'
+      }`
+    : `<label class="sr-only" for="dict-type-${attr.id}">Tipo de dado de ${attrName}</label>
+       <input id="dict-type-${attr.id}" class="dict-type prop-input font-mono text-xs w-full" data-prop="dataType"
+         value="${escHtml(p.dataType || '')}" placeholder="ex: VARCHAR(50)"
+         aria-label="Tipo de dado de ${attrName}">`;
+
   return `<tr class="border-t border-slate-100 hover:bg-slate-50 transition-colors" data-attr-id="${attr.id}">
     <td class="dict-cell font-medium">${labelCell}</td>
-    <td class="dict-cell">
-      <label class="sr-only" for="dict-type-${attr.id}">Tipo de dado de ${attrName}</label>
-      <input id="dict-type-${attr.id}" class="dict-type prop-input font-mono text-xs w-full" data-prop="dataType"
-        value="${escHtml(p.dataType || '')}" placeholder="ex: VARCHAR(50)"
-        aria-label="Tipo de dado de ${attrName}">
-    </td>
+    <td class="dict-cell">${typeCell}</td>
     <td class="dict-cell text-center">${_checkbox('isPK',            p.isPK,           'blue',   false,  `Chave Primária de ${attrName}`)}</td>
     <td class="dict-cell text-center">${isFk ? _tick('green', `${attrName} é Chave Estrangeira`) : ''}</td>
     <td class="dict-cell text-center">${_checkbox('isUnique',        p.isUnique,       'indigo', false,  `Chave Única de ${attrName}`)}</td>

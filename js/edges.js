@@ -6,20 +6,19 @@ const EDGE_SW    = 1.8;
 
 // ─── Public ───────────────────────────────────────────────────────────────────
 
-export function createEdgeGroup(edge, srcNode, tgtNode, cardLabelsLayer) {
+export function createEdgeGroup(edge, srcNode, tgtNode, cardLabelsLayer, parallelOffset = 0) {
   const g = svgEl('g', { 'data-id': edge.id, 'data-kind': 'edge', class: 'mer-edge' });
-  _render(g, edge, srcNode, tgtNode, cardLabelsLayer);
+  _render(g, edge, srcNode, tgtNode, cardLabelsLayer, parallelOffset);
   return g;
 }
 
-export function updateEdgeGroup(g, edge, srcNode, tgtNode, cardLabelsLayer) {
-  // Remove old cardinality labels for this edge from the external layer
+export function updateEdgeGroup(g, edge, srcNode, tgtNode, cardLabelsLayer, parallelOffset = 0) {
   const edgeId = g.getAttribute('data-id');
   if (cardLabelsLayer && edgeId) {
     cardLabelsLayer.querySelectorAll(`[data-edge-id="${edgeId}"]`).forEach(el => el.remove());
   }
   g.replaceChildren();
-  _render(g, edge, srcNode, tgtNode, cardLabelsLayer);
+  _render(g, edge, srcNode, tgtNode, cardLabelsLayer, parallelOffset);
 }
 
 // Progress edge while connecting (canvas coords, inside viewport)
@@ -40,14 +39,41 @@ export function updateProgressEdge(g, from, to) {
 
 // ─── Rendering ────────────────────────────────────────────────────────────────
 
-function _render(g, edge, src, tgt, cardLabelsLayer) {
+function _render(g, edge, src, tgt, cardLabelsLayer, parallelOffset = 0) {
   if (!src || !tgt) return;
+  if (src === tgt) { _renderSelfLoop(g, edge, src, cardLabelsLayer); return; }
 
-  // Lines connect through centers of nodes
-  const from = { x: src.x + src.width / 2,  y: src.y + src.height / 2 };
-  const to   = { x: tgt.x + tgt.width / 2,  y: tgt.y + tgt.height / 2 };
-  const pts  = [from, ...(edge.waypoints || []), to];
-  const d    = _dPoly(pts);
+  const from = { x: src.x + src.width / 2, y: src.y + src.height / 2 };
+  const to   = { x: tgt.x + tgt.width / 2, y: tgt.y + tgt.height / 2 };
+
+  // Parallel edges: quadratic bezier offset perpendicularly so both lines are visible.
+  // Index 0 → straight; 1 → +offset; 2 → -offset; 3 → +2×offset; …
+  let d, pts;
+  let perpX = 0, perpY = 0;   // perpendicular shift applied to cardinality labels
+
+  if (parallelOffset === 0) {
+    pts = [from, ...(edge.waypoints || []), to];
+    d   = _dPoly(pts);
+  } else {
+    const dx  = to.x - from.x, dy = to.y - from.y;
+    const len = Math.hypot(dx, dy);
+    const sign  = parallelOffset % 2 === 1 ? 1 : -1;
+    const steps = Math.ceil(parallelOffset / 2);
+    const amt   = steps * 44 * sign;     // world-unit perpendicular displacement
+    if (len > 0) {
+      // Unit perpendicular (rotated 90° CCW from the edge direction)
+      const ux = -dy / len, uy = dx / len;
+      const mx = (from.x + to.x) / 2 + ux * amt;
+      const my = (from.y + to.y) / 2 + uy * amt;
+      d = `M ${from.x} ${from.y} Q ${mx} ${my} ${to.x} ${to.y}`;
+      // Labels shift half the curve displacement so they don't sit on top of each other
+      perpX = ux * amt * 0.45;
+      perpY = uy * amt * 0.45;
+    } else {
+      d = `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
+    }
+    pts = [from, to];
+  }
 
   // Invisible wide hit area
   g.appendChild(svgEl('path', {
@@ -64,16 +90,45 @@ function _render(g, edge, src, tgt, cardLabelsLayer) {
     'pointer-events': 'none', class: 'edge-visual',
   }));
 
-  // Double lines for total participation (parallel segment near entity end)
+  // Double lines for total participation
   if (srcTotal) _parallelSeg(g, pts[0], pts[1] ?? pts[pts.length - 1]);
   if (tgtTotal) _parallelSeg(g, pts[pts.length - 1], pts[pts.length - 2] ?? pts[0]);
 
-  // Cardinality labels — use border points for placement so labels sit outside the shapes
+  // Cardinality labels — shifted for parallel edges so they don't overlap
   const anchors = closestAnchors(src, tgt);
+  const shift   = pt => ({ x: pt.x + perpX, y: pt.y + perpY });
+  const edgeId  = g.getAttribute('data-id');
+  const labelContainer = cardLabelsLayer ?? g;
+  if (edge.sourceCardinality) _cardLabel(labelContainer, shift(anchors.from), shift(anchors.to), edge.sourceCardinality, cardLabelsLayer ? edgeId : null);
+  if (edge.targetCardinality) _cardLabel(labelContainer, shift(anchors.to),   shift(anchors.from), edge.targetCardinality, cardLabelsLayer ? edgeId : null);
+}
+
+// Self-loop (unary relationship): cubic bezier from right anchor to top anchor
+function _renderSelfLoop(g, edge, node, cardLabelsLayer) {
+  const { x, y, width: w, height: h } = node;
+  const from  = { x: x + w,       y: y + h / 2 };   // right anchor
+  const to    = { x: x + w / 2,   y: y          };   // top anchor
+  const bulge = Math.max(64, w * 0.65);
+  const cp1   = { x: from.x + bulge,        y: from.y - bulge * 0.2 };
+  const cp2   = { x: to.x   + bulge * 0.2,  y: to.y   - bulge       };
+  const d     = `M ${from.x} ${from.y} C ${cp1.x} ${cp1.y} ${cp2.x} ${cp2.y} ${to.x} ${to.y}`;
+
+  g.appendChild(svgEl('path', {
+    d, fill: 'none', stroke: 'transparent',
+    'stroke-width': 14, 'pointer-events': 'stroke', class: 'edge-hit',
+  }));
+  g.appendChild(svgEl('path', {
+    d, fill: 'none', stroke: EDGE_COLOR, 'stroke-width': EDGE_SW,
+    'pointer-events': 'none', class: 'edge-visual',
+  }));
+
+  if (edge.sourceParticipation === 'total') _parallelSeg(g, from, cp1);
+  if (edge.targetParticipation === 'total') _parallelSeg(g, to,   cp2);
+
   const edgeId = g.getAttribute('data-id');
   const labelContainer = cardLabelsLayer ?? g;
-  if (edge.sourceCardinality) _cardLabel(labelContainer, anchors.from, anchors.to, edge.sourceCardinality, cardLabelsLayer ? edgeId : null);
-  if (edge.targetCardinality) _cardLabel(labelContainer, anchors.to,   anchors.from, edge.targetCardinality, cardLabelsLayer ? edgeId : null);
+  if (edge.sourceCardinality) _cardLabel(labelContainer, from, cp1, edge.sourceCardinality, cardLabelsLayer ? edgeId : null);
+  if (edge.targetCardinality) _cardLabel(labelContainer, to,   cp2, edge.targetCardinality, cardLabelsLayer ? edgeId : null);
 }
 
 // Draw a second line parallel to the edge segment, near `pt` pointing toward `toward`

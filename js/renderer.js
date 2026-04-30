@@ -69,9 +69,11 @@ function _onChange({ type, node, edge, id }) {
     case 'edge:add': {
       const src = state.nodes.get(edge.sourceId);
       const tgt = state.nodes.get(edge.targetId);
-      const ge = createEdgeGroup(edge, src, tgt, _cardLabelsLayer);
+      const ge = createEdgeGroup(edge, src, tgt, _cardLabelsLayer, _getParallelIndex(edge));
       _edgesLayer.appendChild(ge);
       edgeGroups.set(edge.id, ge);
+      // Re-render pre-existing parallel edges (their visual index may have changed)
+      _rerenderParallelEdges(edge, edge.id);
       break;
     }
 
@@ -82,13 +84,14 @@ function _onChange({ type, node, edge, id }) {
     case 'edge:delete': {
       const ge = edgeGroups.get(id);
       if (ge) {
-        // Remove cardinality labels for this edge from the labels layer
         if (_cardLabelsLayer) {
           _cardLabelsLayer.querySelectorAll(`[data-edge-id="${id}"]`).forEach(el => el.remove());
         }
         ge.remove();
         edgeGroups.delete(id);
       }
+      // Re-render remaining edges — parallel siblings must recalculate their index
+      for (const [eid] of edgeGroups) _rerenderEdge(eid);
       break;
     }
   }
@@ -131,7 +134,7 @@ function _fullRender() {
   for (const edge of state.edges.values()) {
     const src = state.nodes.get(edge.sourceId);
     const tgt = state.nodes.get(edge.targetId);
-    const g = createEdgeGroup(edge, src, tgt, _cardLabelsLayer);
+    const g = createEdgeGroup(edge, src, tgt, _cardLabelsLayer, _getParallelIndex(edge));
     _edgesLayer.appendChild(g);
     edgeGroups.set(edge.id, g);
   }
@@ -152,7 +155,30 @@ function _rerenderEdge(eid) {
   if (!e || !eg) return;
   const src = state.nodes.get(e.sourceId);
   const tgt = state.nodes.get(e.targetId);
-  if (src && tgt) updateEdgeGroup(eg, e, src, tgt, _cardLabelsLayer);
+  if (src && tgt) updateEdgeGroup(eg, e, src, tgt, _cardLabelsLayer, _getParallelIndex(e));
+}
+
+// Returns the position of `edge` among all edges between the same node pair (either direction).
+// Sorted by edge ID for stable ordering (newer edges always have larger IDs).
+function _getParallelIndex(edge) {
+  const a = edge.sourceId, b = edge.targetId;
+  const siblings = Array.from(state.edges.values())
+    .filter(e => (e.sourceId === a && e.targetId === b) || (e.sourceId === b && e.targetId === a))
+    .sort((x, y) => (x.id < y.id ? -1 : x.id > y.id ? 1 : 0));
+  return siblings.findIndex(e => e.id === edge.id);
+}
+
+// Re-renders edges that share the same node pair as `edge`, excluding `skipId`.
+function _rerenderParallelEdges(edge, skipId) {
+  const a = edge.sourceId, b = edge.targetId;
+  for (const [eid] of edgeGroups) {
+    if (eid === skipId) continue;
+    const e = state.edges.get(eid);
+    if (!e) continue;
+    if ((e.sourceId === a && e.targetId === b) || (e.sourceId === b && e.targetId === a)) {
+      _rerenderEdge(eid);
+    }
+  }
 }
 
 // ─── Handles overlay ──────────────────────────────────────────────────────────

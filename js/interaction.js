@@ -265,7 +265,7 @@ function _onMouseUp(e) {
     let tgtId = null;
     if (hit.type === 'node')    tgtId = hit.id;
     if (hit.type === 'connect' || hit.type === 'resize') tgtId = hit.nodeId;
-    if (tgtId && tgtId !== _connectSrcId) {
+    if (tgtId) {
       history.snapshot();
       state.addEdge({ sourceId: _connectSrcId, targetId: tgtId });
     }
