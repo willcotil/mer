@@ -139,6 +139,16 @@ function _attribute(g, w, h, label, fill, stroke, sw, props) {
     ai.textContent = 'AI';
     g.appendChild(ai);
   }
+  if (props.dataType === 'ENUM') {
+    const badge = svgEl('text', {
+      x: cx + rx - 9, y: cy + ry - 8,
+      'font-size':8, 'font-weight':'700', fill:'#9333ea',
+      'text-anchor':'middle', 'dominant-baseline':'central',
+      'pointer-events':'none',
+    });
+    badge.textContent = 'E';
+    g.appendChild(badge);
+  }
 }
 
 // ─── Relationship (diamond) ───────────────────────────────────────────────────
