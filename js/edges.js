@@ -57,6 +57,8 @@ function _render(g, edge, src, tgt, cardLabelsLayer) {
 
   const srcTotal = edge.sourceParticipation === 'total';
   const tgtTotal = edge.targetParticipation === 'total';
+  const hasRelEndpoint = src?.kind === 'relationship' || src?.kind === 'weak_relationship'
+                      || tgt?.kind === 'relationship' || tgt?.kind === 'weak_relationship';
 
   // Main line
   g.appendChild(svgEl('path', {
@@ -99,6 +101,11 @@ function _parallelSeg(g, pt, toward) {
   }
 }
 
+function _formatCard(c) {
+  const map = { '0..1':'(0,1)', '1..1':'(1,1)', '0..N':'(0,N)', '1..N':'(1,N)', 'M..N':'(M,N)' };
+  return map[c] ?? c;
+}
+
 function _cardLabel(container, borderPt, awayPt, card, edgeId) {
   if (!card) return;
   const dx = awayPt.x - borderPt.x, dy = awayPt.y - borderPt.y;
@@ -116,7 +123,7 @@ function _cardLabel(container, borderPt, awayPt, card, edgeId) {
     fill: '#0f172a', 'pointer-events': 'none',
   });
   if (edgeId) el.setAttribute('data-edge-id', edgeId);
-  el.textContent = card;
+  el.textContent = _formatCard(card);
   container.appendChild(el);
 }
 

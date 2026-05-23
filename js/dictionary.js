@@ -2,6 +2,128 @@ import { state }   from './state.js';
 import { history } from './history.js';
 import { escHtml }  from './utils.js';
 
+// ─── Relationship FK analysis ──────────────────────────────────────────────────
+
+const _cardType = c =>
+  c === '(1,1)' || c === '(0,1)' || c === '1..1' || c === '0..1' ? '1' :
+  c === '(1,N)' || c === '(0,N)' || c === '(M,N)' || c === '1..N' || c === '0..N' || c === 'M..N' ? 'N' : null;
+
+function _fkColName(refEntity) {
+  const pk   = state.getAttributesOf(refEntity.id).find(a => a.props?.isPK);
+  const attr = pk ? pk.label.toLowerCase().replace(/\s+/g, '_') : null;
+  const ent  = refEntity.label.toLowerCase().replace(/\s+/g, '_');
+  return attr ? `${attr}_${ent}_fk` : `${ent}_fk`;
+}
+
+function _analyzeRel(relNode) {
+  const entityEdges = state.getEdgesFor(relNode.id).filter(e => {
+    const oid = e.sourceId === relNode.id ? e.targetId : e.sourceId;
+    const o   = state.nodes.get(oid);
+    return o && (o.kind === 'entity' || o.kind === 'weak_entity');
+  });
+  if (entityEdges.length !== 2) return null;
+  const [eA, eB]   = entityEdges;
+  const nAId = eA.sourceId === relNode.id ? eA.targetId : eA.sourceId;
+  const nBId = eB.sourceId === relNode.id ? eB.targetId : eB.sourceId;
+  const nodeA = state.nodes.get(nAId);
+  const nodeB = state.nodes.get(nBId);
+  const cardA = _cardType(eA.sourceId === nAId ? eA.sourceCardinality : eA.targetCardinality);
+  const cardB = _cardType(eB.sourceId === nBId ? eB.sourceCardinality : eB.targetCardinality);
+  const relAttrs = state.getAttributesOf(relNode.id);
+  if (!cardA || !cardB) return null;
+  if (cardA === '1' && cardB === '1') return { type: '1:1', nodeA, nodeB, relAttrs };
+  if (cardA === '1' && cardB === 'N') return { type: '1:N', side1: nodeA, sideN: nodeB, relAttrs };
+  if (cardA === 'N' && cardB === '1') return { type: '1:N', side1: nodeB, sideN: nodeA, relAttrs };
+  return { type: 'N:N', nodeA, nodeB, relAttrs };
+}
+
+function _getDerivedFKsForEntity(entityId) {
+  const result = [];
+  for (const rel of state.nodes.values()) {
+    if (rel.kind !== 'relationship' && rel.kind !== 'weak_relationship') continue;
+    const a = _analyzeRel(rel);
+    if (!a) continue;
+    if (a.type === '1:N' && a.sideN?.id === entityId) {
+      result.push({ fkCol: _fkColName(a.side1), refLabel: a.side1.label, relLabel: rel.label });
+    } else if (a.type === '1:1' && rel.props?.fk1to1ReceiverNodeId === entityId) {
+      const donor = a.nodeA?.id === entityId ? a.nodeB : a.nodeA;
+      if (donor) result.push({ fkCol: _fkColName(donor), refLabel: donor.label, relLabel: rel.label });
+    }
+  }
+  return result;
+}
+
+function _derivedFKRow({ fkCol, refLabel, relLabel }) {
+  return `<tr class="border-t border-slate-100 bg-amber-50/50">
+    <td class="dict-cell italic text-amber-800">${escHtml(fkCol)} <span class="text-xs text-amber-500 font-normal not-italic">(derivada)</span></td>
+    <td class="dict-cell text-xs font-mono text-slate-400">—</td>
+    <td class="dict-cell text-center"></td>
+    <td class="dict-cell text-center">${_tick('green', 'FK derivada')}</td>
+    <td class="dict-cell text-center"></td>
+    <td class="dict-cell text-center">${_tick('slate', 'Não nulo')}</td>
+    <td class="dict-cell text-center"></td>
+    <td class="dict-cell text-xs text-slate-500">${escHtml(refLabel)} <span class="text-slate-400 italic">(via ${escHtml(relLabel)})</span></td>
+    <td class="dict-cell text-xs text-slate-400 italic">FK gerada automaticamente</td>
+  </tr>`;
+}
+
+function _junctionFKRow(colName, refLabel) {
+  return `<tr class="border-t border-slate-100 bg-blue-50/30">
+    <td class="dict-cell italic text-blue-800">${escHtml(colName)}</td>
+    <td class="dict-cell text-xs font-mono text-slate-400">—</td>
+    <td class="dict-cell text-center">${_tick('blue', 'PK composta')}</td>
+    <td class="dict-cell text-center">${_tick('green', 'FK')}</td>
+    <td class="dict-cell text-center"></td>
+    <td class="dict-cell text-center">${_tick('slate', 'Não nulo')}</td>
+    <td class="dict-cell text-center"></td>
+    <td class="dict-cell text-xs text-slate-500">${escHtml(refLabel)}</td>
+    <td class="dict-cell text-xs text-slate-400 italic">FK para ${escHtml(refLabel)}</td>
+  </tr>`;
+}
+
+function _junctionTable(rel, { nodeA, nodeB, relAttrs }) {
+  const colA = _fkColName(nodeA);
+  const colB = _fkColName(nodeB);
+  const tableName = `${nodeA.label.toLowerCase().replace(/\s+/g, '_')}_${nodeB.label.toLowerCase().replace(/\s+/g, '_')}`;
+  const attrRows = relAttrs.map(a => _attrRow(a, new Map())).join('');
+  const rows = _junctionFKRow(colA, nodeA.label) + _junctionFKRow(colB, nodeB.label) + attrRows;
+  return `<div class="mb-8">
+    <h3 class="text-base font-bold text-slate-800 mb-1 flex items-center gap-2">
+      <span class="text-amber-500 text-lg">◇</span>
+      ${escHtml(tableName)}
+      <span class="text-xs font-normal text-slate-400 ml-1">(tabela associativa N:N)</span>
+    </h3>
+    <div class="overflow-x-auto border border-slate-200 rounded-lg">
+      <table class="w-full text-sm">
+        <caption class="sr-only">Tabela associativa ${escHtml(tableName)}</caption>
+        <thead class="bg-slate-100 text-slate-600">
+          <tr>
+            <th scope="col" class="dict-head text-left">Atributo</th>
+            <th scope="col" class="dict-head text-left">Tipo</th>
+            <th scope="col" class="dict-head text-center w-10" data-tooltip="Chave Primária">PK</th>
+            <th scope="col" class="dict-head text-center w-10" data-tooltip="Chave Estrangeira">FK</th>
+            <th scope="col" class="dict-head text-center w-10" data-tooltip="Chave Única">UK</th>
+            <th scope="col" class="dict-head text-center w-12" data-tooltip="Não Nulo">NN</th>
+            <th scope="col" class="dict-head text-center w-10" data-tooltip="Auto Incremento">AI</th>
+            <th scope="col" class="dict-head text-left">Referência FK</th>
+            <th scope="col" class="dict-head text-left">Descrição</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+function _renderJunctionTables() {
+  return Array.from(state.nodes.values())
+    .filter(n => n.kind === 'relationship' || n.kind === 'weak_relationship')
+    .map(rel => ({ rel, a: _analyzeRel(rel) }))
+    .filter(({ a }) => a?.type === 'N:N')
+    .map(({ rel, a }) => _junctionTable(rel, a))
+    .join('');
+}
+
 // ─── Show modal ───────────────────────────────────────────────────────────────
 
 export function showDataDictionary() {
@@ -86,7 +208,7 @@ function _render() {
     return;
   }
 
-  content.innerHTML = entities.map(e => _entityTable(e)).join('');
+  content.innerHTML = entities.map(e => _entityTable(e)).join('') + _renderJunctionTables();
   content.scrollTop = scrollTop;
   _wire(content);
 }
@@ -108,9 +230,12 @@ function _entityTable(entity) {
     return (a.label || '').localeCompare(b.label || '', 'pt');
   });
 
-  const rows = sorted.length
+  const derivedFKs  = _getDerivedFKsForEntity(entity.id);
+  const derivedRows = derivedFKs.map(_derivedFKRow).join('');
+  const rows = (sorted.length
     ? sorted.map(a => _attrRow(a, fkMap)).join('')
-    : `<tr><td colspan="9" class="dict-cell italic text-slate-400">Sem atributos definidos</td></tr>`;
+    : `<tr><td colspan="9" class="dict-cell italic text-slate-400">Sem atributos definidos</td></tr>`)
+    + derivedRows;
 
   const entityDesc = entity.props?.description
     ? `<p class="text-xs text-slate-500 mt-0.5 mb-2">${escHtml(entity.props.description)}</p>`

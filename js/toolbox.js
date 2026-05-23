@@ -107,7 +107,6 @@ function _defaultLabel(kind, preset = '') {
   }
   const map = {
     entity:'Entidade', weak_entity:'Ent. Fraca',
-    relationship:'relacionamento', weak_relationship:'rel. fraca',
     aggregation:'', generalization:'',
   };
   return map[kind] ?? 'Novo';

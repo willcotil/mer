@@ -1,7 +1,7 @@
 import { state }                              from './state.js';
 import { history }                            from './history.js';
-import { screenToCanvas, canvasToSVG, svgEl } from './utils.js';
-import { getAnchorPoints }                    from './shapes.js';
+import { screenToCanvas, canvasToSVG, svgEl, computeAutoSize } from './utils.js';
+import { getAnchorPoints, getDefaultStyle }   from './shapes.js';
 import { createProgressEdge, updateProgressEdge } from './edges.js';
 import { grid }                               from './grid.js';
 
@@ -266,8 +266,14 @@ function _onMouseUp(e) {
     if (hit.type === 'node')    tgtId = hit.id;
     if (hit.type === 'connect' || hit.type === 'resize') tgtId = hit.nodeId;
     if (tgtId && tgtId !== _connectSrcId) {
+      const srcNode = state.nodes.get(_connectSrcId);
+      const tgtNode = state.nodes.get(tgtId);
       history.snapshot();
-      state.addEdge({ sourceId: _connectSrcId, targetId: tgtId });
+      if (_shouldAutoRel(srcNode, tgtNode)) {
+        _autoCreateRelationship(_connectSrcId, tgtId, srcNode, tgtNode);
+      } else {
+        state.addEdge({ sourceId: _connectSrcId, targetId: tgtId });
+      }
     }
     _cancelConnect(); return;
   }
@@ -460,4 +466,37 @@ function _deleteSelected() {
     if (state.nodes.has(id)) state.deleteNode(id);
     else if (state.edges.has(id)) state.deleteEdge(id);
   }
+}
+
+// ─── Auto-relationship helpers ────────────────────────────────────────────────
+
+const _ENTITY_KINDS = new Set(['entity', 'weak_entity']);
+const _REL_ELIGIBLE = new Set(['entity', 'weak_entity', 'aggregation']);
+
+function _shouldAutoRel(src, tgt) {
+  if (!src || !tgt) return false;
+  return _REL_ELIGIBLE.has(src.kind) && _REL_ELIGIBLE.has(tgt.kind)
+      && (_ENTITY_KINDS.has(src.kind) || _ENTITY_KINDS.has(tgt.kind));
+}
+
+function _autoCreateRelationship(srcId, tgtId, src, tgt) {
+  const mid = {
+    x: (src.x + src.width / 2 + tgt.x + tgt.width / 2) / 2,
+    y: (src.y + src.height / 2 + tgt.y + tgt.height / 2) / 2,
+  };
+  const { width, height } = computeAutoSize('relacionamento', 'relationship');
+  const relNode = state.addNode({
+    kind: 'relationship',
+    x: grid.snap(mid.x) - width / 2,
+    y: grid.snap(mid.y) - height / 2,
+    width, height,
+    autoSize: true,
+    label: 'relacionamento',
+    style: getDefaultStyle('relationship'),
+    props: {},
+  });
+  state.addEdge({ sourceId: srcId, targetId: relNode.id });
+  state.addEdge({ sourceId: relNode.id, targetId: tgtId });
+  state.setSelection([relNode.id]);
+  document.dispatchEvent(new CustomEvent('mer:rename', { detail: { id: relNode.id } }));
 }
