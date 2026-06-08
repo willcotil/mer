@@ -21,6 +21,17 @@ function _analyzeRel(relNode) {
     const o   = state.nodes.get(oid);
     return o && (o.kind === 'entity' || o.kind === 'weak_entity');
   });
+  if (entityEdges.length === 3) {
+    const [eA, eB, eC] = entityEdges;
+    const nAId = eA.sourceId === relNode.id ? eA.targetId : eA.sourceId;
+    const nBId = eB.sourceId === relNode.id ? eB.targetId : eB.sourceId;
+    const nCId = eC.sourceId === relNode.id ? eC.targetId : eC.sourceId;
+    const nodeA = state.nodes.get(nAId);
+    const nodeB = state.nodes.get(nBId);
+    const nodeC = state.nodes.get(nCId);
+    const relAttrs = state.getAttributesOf(relNode.id);
+    return { type: 'N:N:N', nodeA, nodeB, nodeC, relAttrs };
+  }
   if (entityEdges.length !== 2) return null;
   const [eA, eB]   = entityEdges;
   const nAId = eA.sourceId === relNode.id ? eA.targetId : eA.sourceId;
@@ -81,6 +92,41 @@ function _junctionFKRow(colName, refLabel) {
   </tr>`;
 }
 
+function _ternaryJunctionTable(rel, { nodeA, nodeB, nodeC, relAttrs }) {
+  const colA = _fkColName(nodeA);
+  const colB = _fkColName(nodeB);
+  const colC = _fkColName(nodeC);
+  const tableName = `${nodeA.label.toLowerCase().replace(/\s+/g, '_')}_${nodeB.label.toLowerCase().replace(/\s+/g, '_')}_${nodeC.label.toLowerCase().replace(/\s+/g, '_')}`;
+  const attrRows = relAttrs.map(a => _attrRow(a, new Map())).join('');
+  const rows = _junctionFKRow(colA, nodeA.label) + _junctionFKRow(colB, nodeB.label) + _junctionFKRow(colC, nodeC.label) + attrRows;
+  return `<div class="mb-8">
+    <h3 class="text-base font-bold text-slate-800 mb-1 flex items-center gap-2">
+      <span class="text-amber-500 text-lg">◇</span>
+      ${escHtml(tableName)}
+      <span class="text-xs font-normal text-slate-400 ml-1">(tabela associativa ternária)</span>
+    </h3>
+    <div class="overflow-x-auto border border-slate-200 rounded-lg">
+      <table class="w-full text-sm">
+        <caption class="sr-only">Tabela associativa ${escHtml(tableName)}</caption>
+        <thead class="bg-slate-100 text-slate-600">
+          <tr>
+            <th scope="col" class="dict-head text-left">Atributo</th>
+            <th scope="col" class="dict-head text-left">Tipo</th>
+            <th scope="col" class="dict-head text-center w-10" data-tooltip="Chave Primária">PK</th>
+            <th scope="col" class="dict-head text-center w-10" data-tooltip="Chave Estrangeira">FK</th>
+            <th scope="col" class="dict-head text-center w-10" data-tooltip="Chave Única">UK</th>
+            <th scope="col" class="dict-head text-center w-12" data-tooltip="Não Nulo">NN</th>
+            <th scope="col" class="dict-head text-center w-10" data-tooltip="Auto Incremento">AI</th>
+            <th scope="col" class="dict-head text-left">Referência FK</th>
+            <th scope="col" class="dict-head text-left">Descrição</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
 function _junctionTable(rel, { nodeA, nodeB, relAttrs }) {
   const colA = _fkColName(nodeA);
   const colB = _fkColName(nodeB);
@@ -119,8 +165,8 @@ function _renderJunctionTables() {
   return Array.from(state.nodes.values())
     .filter(n => n.kind === 'relationship' || n.kind === 'weak_relationship')
     .map(rel => ({ rel, a: _analyzeRel(rel) }))
-    .filter(({ a }) => a?.type === 'N:N')
-    .map(({ rel, a }) => _junctionTable(rel, a))
+    .filter(({ a }) => a?.type === 'N:N' || a?.type === 'N:N:N')
+    .map(({ rel, a }) => a.type === 'N:N:N' ? _ternaryJunctionTable(rel, a) : _junctionTable(rel, a))
     .join('');
 }
 
@@ -134,7 +180,7 @@ export function showDataDictionary() {
 }
 
 export function exportDictionaryCSV() {
-  const rows = [['Entidade', 'Tipo Entidade', 'Atributo', 'Tipo Dado', 'PK', 'FK', 'UK', 'NN', 'AI', 'Multivalorado', 'Derivado', 'Composto', 'Referência FK', 'Descrição Atributo', 'Descrição Entidade']];
+  const rows = [['Atributo', 'Tipo', 'PK', 'FK', 'UK', 'NN', 'AI', 'Referência FK', 'Descrição']];
 
   const entities = Array.from(state.nodes.values()).filter(
     n => n.kind === 'entity' || n.kind === 'weak_entity'
@@ -143,13 +189,6 @@ export function exportDictionaryCSV() {
   for (const entity of entities) {
     const attrs  = state.getAttributesOf(entity.id);
     const fkMap  = _buildFKMap(entity.id);
-    const entityType = entity.kind === 'weak_entity' ? 'Entidade Fraca' : 'Entidade';
-    const entityDesc = entity.props?.description || '';
-
-    if (!attrs.length) {
-      rows.push([entity.label, entityType, '', '', '', '', '', '', '', '', '', '', '', '', entityDesc]);
-      continue;
-    }
 
     for (const attr of attrs) {
       const p    = attr.props || {};
@@ -158,8 +197,6 @@ export function exportDictionaryCSV() {
         ? `ENUM(${p.enumValues.join(',')})`
         : (p.dataType || '');
       rows.push([
-        entity.label,
-        entityType,
         attr.label,
         csvType,
         p.isPK            ? 'Sim' : '',
@@ -167,12 +204,8 @@ export function exportDictionaryCSV() {
         p.isUnique        ? 'Sim' : '',
         (p.isNotNull || p.isPK) ? 'Sim' : '',
         p.isAutoIncrement ? 'Sim' : '',
-        p.isMultivalued   ? 'Sim' : '',
-        p.isDerived       ? 'Sim' : '',
-        p.isComposite     ? 'Sim' : '',
         fkR,
         p.description     || '',
-        entityDesc,
       ]);
     }
   }

@@ -3,7 +3,7 @@ import { history } from './history.js';
 
 // ─── Save ─────────────────────────────────────────────────────────────────────
 
-export function saveToFile(filename = 'diagrama.mer') {
+export async function saveToFile(filename = 'diagrama.mer') {
   const snap = state.toSnapshot();
   const payload = {
     _type:    'mer-editor-v1',
@@ -11,11 +11,32 @@ export function saveToFile(filename = 'diagrama.mer') {
     _created: new Date().toISOString(),
     ...snap,
   };
-  const json  = JSON.stringify(payload, null, 2);
-  const blob  = new Blob([json], { type: 'application/json' });
-  const url   = URL.createObjectURL(blob);
-  const a     = document.createElement('a');
-  a.href = url; a.download = filename;
+  const json = JSON.stringify(payload, null, 2);
+
+  if (window.showSaveFilePicker) {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: filename,
+        types: [{ description: 'Diagrama MER', accept: { 'application/json': ['.mer'] } }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(json);
+      await writable.close();
+      state.dirty = false;
+      _flashSaved();
+      return;
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+    }
+  }
+
+  const name = window.prompt('Nome do arquivo:', filename);
+  if (name === null) return;
+  const finalName = name.trim() || filename;
+  const blob = new Blob([json], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = finalName.endsWith('.mer') ? finalName : finalName + '.mer';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
