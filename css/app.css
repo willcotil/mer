@@ -88,8 +88,10 @@ html.dark #canvas-container {
 /* Dark mode modal (dict-dialog) */
 html.dark #dict-dialog                    { background: var(--modal-bg); color: var(--modal-text); }
 html.dark #dict-dialog .flex.items-center { background: var(--modal-head-bg); border-bottom-color: var(--modal-border); }
-html.dark #dict-dialog h2                 { color: var(--modal-text); }
+html.dark #dict-dialog h2,
+html.dark #dict-dialog h3                 { color: var(--modal-text); }
 html.dark #dict-dialog p                  { color: var(--text-muted); }
+html.dark #dict-dialog thead              { background-color: var(--modal-head-bg) !important; }
 html.dark .dict-head                      { border-bottom-color: var(--modal-border); color: var(--text-muted); }
 html.dark .dict-cell                      { border-bottom-color: var(--modal-cell-border); color: var(--modal-text); }
 html.dark #dict-dialog button:not(#dict-close) { background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-panel); }
@@ -156,7 +158,9 @@ html.high-contrast .mer-node.selected .shape-main {
 /* High contrast modal */
 html.high-contrast #dict-dialog              { background: #000000; color: #ffffff; border: 2px solid #ffd700; }
 html.high-contrast #dict-dialog .flex.items-center { background: #111111; border-bottom: 2px solid #ffd700; }
-html.high-contrast #dict-dialog h2           { color: #ffffff; }
+html.high-contrast #dict-dialog h2,
+html.high-contrast #dict-dialog h3           { color: #ffffff; }
+html.high-contrast #dict-dialog thead       { background-color: #111111 !important; }
 html.high-contrast .dict-head               { border-bottom: 2px solid #ffd700; color: #ffffff; font-weight: 700; }
 html.high-contrast .dict-cell               { border-bottom: 1px solid #ffd700; color: #ffffff; }
 
